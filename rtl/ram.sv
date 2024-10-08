@@ -10,7 +10,7 @@ module ram #(
 
     input i_read_enable,
     input [ADDR_WIDTH:0] i_read_addr,
-    input [DATA_WIDTH:0] o_read_data,
+    output [DATA_WIDTH:0] o_read_data,
 
     input [3:0] write_enable,
     input [ADDR_WIDTH:0] i_write_addr,
