@@ -9,9 +9,10 @@ module ram #(
     input rst,
 
     //Read
-    input i_read_enable,
+    input i_read_req,
     input [ADDR_WIDTH:0] i_read_addr,
     output logic [DATA_WIDTH:0] o_read_data,
+
 
     // Write
     input i_write_enable,
@@ -20,13 +21,12 @@ module ram #(
     input [DATA_WIDTH:0] i_write_data
 );
 
-
 `ifdef TESTING1
     always @(posedge clk) begin
     $display("clk: ", clk);
     $display("clk_en: ", clk_en);
     $display("rst: ", rst);
-    $display("i_read_enable: ", i_read_enable);
+    $display("i_read_req: ", i_read_req);
     $display("i_read_addr: ", i_read_addr);
     $display("o_read_data: ", o_read_data);
     $display("i_write_enable: ", i_write_enable);
@@ -57,13 +57,13 @@ always_ff @(posedge clk) begin
     end
 end
 
+
+
 always_ff @(posedge clk) begin
-    if (clk_en) begin
-        if (i_read_enable)
+    if (clk_en)
+        if (i_read_req) begin
             o_read_data <= {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
-    end
+        end 
 end
-
-
 
 endmodule

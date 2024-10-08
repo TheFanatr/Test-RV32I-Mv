@@ -17,9 +17,8 @@ async def reset_dut(dut):
 @cocotb.test()
 async def test_ram(dut):
     cocotb.start_soon(Clock(dut.clk, 1, units='ns').start())
-    reset_dut(dut)
+    await reset_dut(dut)
 
-    dut.clk_en.value = 1
     await Timer(1, units="ns")
     for addr in range(8):
         data = 2_000_000_000 + addr
@@ -31,12 +30,107 @@ async def test_ram(dut):
         dut.i_write_enable.value = 0
         await Timer(1, units="ns")
         dut.i_read_addr.value = addr
-        dut.i_read_enable.value = 1
-        await Timer(5, units="ns")
+        dut.i_read_req.value = 1
+        await Timer(8, units="ns")
         assert dut.o_read_data.value == data, str(dut.o_read_data.value)
 
+@cocotb.test()
+async def test_ram_byte_en(dut):
+    cocotb.start_soon(Clock(dut.clk, 1, units='ns').start())
+    await reset_dut(dut)
+
+    await Timer(1, units="ns")
+
+    #write first bit
+    data = 0xFF00FF00
+    addr = 1
+    dut.i_write_addr.value = addr
+    dut.i_write_data.value = data
+    dut.i_write_enable.value = 1
+    dut.i_byte_enable.value = 0b1111
+    await Timer(1, units="ns")
+    dut.i_write_enable.value = 0
+    await Timer(1, units="ns")
+    dut.i_read_addr.value = addr
+    dut.i_read_req.value = 1
+    await Timer(1, units="ns")
+    assert dut.o_read_data.value == data, str(dut.o_read_data.value)
+
+    #write only one byte
+    data = 0x0000AA00
+    addr = 1
+    dut.i_write_addr.value = addr
+    dut.i_write_data.value = data
+    dut.i_write_enable.value = 1
+    dut.i_byte_enable.value = 0b0010
+    await Timer(1, units="ns")
+    dut.i_write_enable.value = 0
+    await Timer(1, units="ns")
+    dut.i_read_addr.value = addr
+    dut.i_read_req.value = 1
+    await Timer(1, units="ns")
+    assert dut.o_read_data.value == 0xFF00AA00, str(dut.o_read_data.value)
 
 
+@cocotb.test()
+async def test_ram_byte_en_neg(dut):
+    cocotb.start_soon(Clock(dut.clk, 1, units='ns').start())
+    await reset_dut(dut)
+
+    await Timer(1, units="ns")
+
+    #write first bit
+    data = 0xFF00FF00
+    addr = 1
+    dut.i_write_addr.value = addr
+    dut.i_write_data.value = data
+    dut.i_write_enable.value = 1
+    dut.i_byte_enable.value = 0b1111
+    await Timer(1, units="ns")
+    dut.i_write_enable.value = 0
+    await Timer(1, units="ns")
+    dut.i_read_addr.value = addr
+    dut.i_read_req.value = 1
+    await Timer(1, units="ns")
+    assert dut.o_read_data.value == data, str(dut.o_read_data.value)
+
+    #write only one byte
+    data = 0x0000AA00
+    addr = 1
+    dut.i_write_addr.value = addr
+    dut.i_write_data.value = data
+    dut.i_write_enable.value = 1
+    dut.i_byte_enable.value = 0b1010
+    await Timer(1, units="ns")
+    dut.i_write_enable.value = 0
+    await Timer(1, units="ns")
+    dut.i_read_addr.value = addr
+    dut.i_read_req.value = 1
+    await Timer(1, units="ns")
+    assert dut.o_read_data.value != 0xFF00AA00, str(dut.o_read_data.value)
+
+@cocotb.test()
+async def test_ram_timing(dut):
+    cocotb.start_soon(Clock(dut.clk, 1, units='ns').start())
+    await reset_dut(dut)
+
+    await Timer(1, units="ns")
+
+    #write first bit
+    data = 0xFF00FF00
+    addr = 1
+    dut.i_write_addr.value = addr
+    dut.i_write_data.value = data
+    dut.i_write_enable.value = 1
+    dut.i_byte_enable.value = 0b1111
+    await Timer(1, units="ns")
+    dut.i_write_enable.value = 0
+    dut.i_write_addr.value = 0
+    dut.i_write_data.value = 0
+    dut.i_read_addr.value = addr
+    dut.i_read_req.value = 1
+    await Timer(1, units="ns")
+    assert dut.o_read_data.value == data, str(dut.o_read_data.value)
 
 def test_ram_runner():
     sim = os.getenv("SIM", "verilator")
