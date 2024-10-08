@@ -6,8 +6,16 @@ module rv32i (
     input rst
 );
 
-always @(posedge clk) begin
-  //$display("CPU");
-end
+ram u_ram (
+  .clk(clk),
+  .clk_en(clk_en),
+  .rst(rst)
+);
+
+`ifdef TESTING
+  always @(posedge clk) begin
+    //$display("CPU");
+  end
+`endif
 
 endmodule
