@@ -9,7 +9,7 @@ lines = [l.strip().strip('"').strip("\\n") for l in lines[1:]]
 mods = "["
 for x in lines:
     try:
-        print(subprocess.check_output(['/usr/bin/yosys' ,'-p' , f"read -sv rtl/*.sv; prep -top {x}; write_json ./tmp/{x}.json"]))
+        print(subprocess.check_output(['/usr/bin/yosys', '-DTESTING'  ,'-p' , f"read -sv rtl/*.sv; prep -top {x}; write_json ./tmp/{x}.json"]))
         print(subprocess.check_output(['/usr/bin/netlistsvg', f'./tmp/{x}.json', '-o', f'./docs/{x}.svg']))
         pass
     except:
