@@ -1,3 +1,4 @@
+`include "types.svh"
 
 // 2 STATES: BOOT; RUN
 // BOOT = listening for commands
@@ -14,13 +15,19 @@
 // read; read from ram
 //      readsize readaddr
 
+
  // 2^6 = 64 max states
 typedef enum logic [5:0] {  
-    ST_START
+    ST_START,
+    ST_ERROR,
+
+    ST_NOP_O,
+    ST_NOP_P
 } state_t;
 
 typedef enum logic [3:0] {  
-    BIOS_ER_UNKNOWN
+    BIOS_ER_UNKNOWN,
+    BIOS_ER_BADCMD
 } error_code_t;
 
 typedef struct packed {
@@ -28,21 +35,53 @@ typedef struct packed {
     error_code_t error;
 } fsm_state_t;
 
-`include "types.svh"
-
 module bios(
     input clk,
     input clk_en,
-    input rst
+    input rst,
+
+    input [7:0] rx_data,
+    input rx_valid,
+    input rx_ready
 );
 
-fsm_state_t fsm;
+wire step_en = rx_valid & rx_ready & clk_en;
 
+fsm_state_t fsm;
 always_ff @(posedge clk)
-    if(clk_en)
+    if(step_en)
         case (fsm.state)
             ST_START: 
-                fsm <= {ST_START, BIOS_ER_UNKNOWN};
+                case (rx_data)
+                    ASCII_LOWER_n: //nop 
+                        fsm <= {ST_NOP_O, BIOS_ER_UNKNOWN};
+                    ASCII_LOWER_b: //boot
+                        fsm <= {ST_ERROR, BIOS_ER_BADCMD};
+                    ASCII_LOWER_r: //rst
+                        fsm <= {ST_ERROR, BIOS_ER_BADCMD};
+                    ASCII_LOWER_e: //echo
+                        fsm <= {ST_ERROR, BIOS_ER_BADCMD};
+                    ASCII_LOWER_w: //write
+                        fsm <= {ST_ERROR, BIOS_ER_BADCMD};
+                    ASCII_LOWER_r: //write
+                        fsm <= {ST_ERROR, BIOS_ER_BADCMD};
+                    default:
+                        fsm <= {ST_ERROR, BIOS_ER_BADCMD}; // report bad cmd error
+                endcase
+            ST_NOP_O:
+                case (rx_data)
+                    ASCII_LOWER_o: //nop 
+                        fsm <= {ST_NOP_P, BIOS_ER_UNKNOWN};
+                    default:
+                        fsm <= {ST_ERROR, BIOS_ER_BADCMD}; // report bad cmd error
+                endcase
+            ST_NOP_P:
+                case (rx_data)
+                    ASCII_LOWER_p: //nop 
+                        fsm <= {ST_START, BIOS_ER_UNKNOWN};
+                    default:
+                        fsm <= {ST_ERROR, BIOS_ER_BADCMD}; // report bad cmd error
+                endcase
             default:
                 fsm <= {ST_START, BIOS_ER_UNKNOWN};
         endcase

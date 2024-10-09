@@ -1,19 +1,70 @@
 `ifndef TYPES_SVH
 `define TYPES_SVH
-  typedef enum logic [2:0] {
-    ERROR,
-    R,
-    I,
-    S,
-    B,
-    U,
-    J
-  } inst_type_e;
-
-    typedef enum logic [1:0] {
-    Byte,
-    Half,
-    Word
-    } mem_size_e;
+ 
+ 
+typedef enum {  
+    ASCII_0 = 48,
+    ASCII_1 = 49,
+    ASCII_2 = 50,
+    ASCII_3 = 51,
+    ASCII_4 = 52,
+    ASCII_5 = 53,
+    ASCII_6 = 54,
+    ASCII_7 = 55,
+    ASCII_8 = 56,
+    ASCII_9 = 57,
+    ASCII_A = 65,
+    ASCII_B = 66,
+    ASCII_C = 67,
+    ASCII_D = 68,
+    ASCII_E = 69,
+    ASCII_F = 70,
+    ASCII_G = 71,
+    ASCII_H = 72,
+    ASCII_I = 73,
+    ASCII_J = 74,
+    ASCII_K = 75,
+    ASCII_L = 76,
+    ASCII_M = 77,
+    ASCII_N = 78,
+    ASCII_O = 79,
+    ASCII_P = 80,
+    ASCII_Q = 81,
+    ASCII_R = 82,
+    ASCII_S = 83,
+    ASCII_T = 84,
+    ASCII_U = 85,
+    ASCII_V = 86,
+    ASCII_W = 87,
+    ASCII_X = 88,
+    ASCII_Y = 89,
+    ASCII_Z = 90,
+    ASCII_LOWER_a = 97,
+    ASCII_LOWER_b = 98,
+    ASCII_LOWER_c = 99,
+    ASCII_LOWER_d = 100,
+    ASCII_LOWER_e = 101,
+    ASCII_LOWER_f = 102,
+    ASCII_LOWER_g = 103,
+    ASCII_LOWER_h = 104,
+    ASCII_LOWER_i = 105,
+    ASCII_LOWER_j = 106,
+    ASCII_LOWER_k = 107,
+    ASCII_LOWER_l = 108,
+    ASCII_LOWER_m = 109,
+    ASCII_LOWER_n = 110,
+    ASCII_LOWER_o = 111,
+    ASCII_LOWER_p = 112,
+    ASCII_LOWER_q = 113,
+    ASCII_LOWER_r = 114,
+    ASCII_LOWER_s = 115,
+    ASCII_LOWER_t = 116,
+    ASCII_LOWER_u = 117,
+    ASCII_LOWER_v = 118,
+    ASCII_LOWER_w = 119,
+    ASCII_LOWER_x = 120,
+    ASCII_LOWER_y = 121,
+    ASCII_LOWER_z = 122
+} ascii_t;
 
 `endif // TYPES_SVH
