@@ -121,15 +121,12 @@ module bios #(
   always_ff @(posedge clk) begin
     if (exec)
         case (opcode)
-            BOP_NOP: begin
+            BOP_NOP:
                 control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
-            end
-            BOP_BOOT: begin
+            BOP_BOOT:
                 control <= {1'd0, 1'd0, 1'd1, 1'd0, 1'd0};
-            end
-            BOP_RST: begin
+            BOP_RST: 
                 control <= {1'd0, 1'd1, 1'd0, 1'd0, 1'd0};
-            end
             BOP_ADR_LOWER: begin
                 ram_addr.a <= a;
                 ram_addr.b <= b;
@@ -140,13 +137,12 @@ module bios #(
                 ram_addr.d <= b;
                 control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
             end
-            BOP_WRITE: begin
+            BOP_WRITE:
                 control <= {1'd0, 1'd0, 1'd0, 1'd1, 1'd0};
-            end
-            BOP_READ: begin
+            BOP_READ:
                 control <= {1'd1, 1'd0, 1'd0, 1'd0, 1'd1};
-            end
             default:
+            control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
         endcase
   end
 
