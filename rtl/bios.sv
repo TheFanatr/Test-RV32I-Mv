@@ -114,23 +114,26 @@ module bios #(
       case (dispatcher.state)
         BD_READ: // Read char
             dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
-        BD_STORE:
+        BD_STORE: begin
             opcode <= i_data;
             if(opcode < 4) begin 
                 dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
             end else begin
                 dispatcher <= {BD_ONE, 4'b1_0_0_0}; 
             end
-        BD_ONE:
+        end
+        BD_ONE: begin
             a <= i_data;
             if(opcode > 4) begin 
                 dispatcher <= {BD_TWO, 4'b1_0_0_0}; 
             end else begin
                 dispatcher <= {BD_STORE, 4'b1_1_0_0}; 
             end
-        BD_TWO:
+        end
+        BD_TWO: begin
             b <= i_data;
             dispatcher <= {BD_STORE, 4'b1_0_1_0}; 
+        end
         default: 
             dispatcher <= {BD_READ, 4'b1_0_0_0}; // reset dispatcher
       endcase
