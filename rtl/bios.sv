@@ -113,8 +113,10 @@ module bios #(
     end else if(cycle_en) begin
       case (dispatcher.state)
         BD_READ: // Read char
-            dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
-        BD_STORE: begin
+            if (read_en)
+                dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
+        BD_STORE: 
+        if (read_en) begin
             opcode <= bios_opcode_t'(i_data);
             if(opcode < 4) begin 
                 dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
@@ -122,7 +124,8 @@ module bios #(
                 dispatcher <= {BD_ONE, 4'b1_0_0_0}; 
             end
         end
-        BD_ONE: begin
+        BD_ONE: 
+        if (read_en) begin
             a <= i_data;
             if(opcode > 4) begin 
                 dispatcher <= {BD_TWO, 4'b1_0_0_0}; 
@@ -130,7 +133,8 @@ module bios #(
                 dispatcher <= {BD_STORE, 4'b1_1_0_0}; 
             end
         end
-        BD_TWO: begin
+        BD_TWO: 
+        if (read_en) begin
             b <= i_data;
             dispatcher <= {BD_STORE, 4'b1_0_1_0}; 
         end
