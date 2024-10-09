@@ -101,7 +101,7 @@ always_ff @(posedge clk)
                     case (i_data)
                         ASCII_LOWER_n: //nop 
                             fsm <= {ST_NOP_O, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
-                        /*ASCII_LOWER_b: //boot
+                        ASCII_LOWER_b: //boot
                             fsm <= {ST_BOOT_O1, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
                         //ASCII_LOWER_r: //rst
                         //    fsm <= {ST_RST_S, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
@@ -109,7 +109,6 @@ always_ff @(posedge clk)
                             fsm <= {ST_WRITE_R, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
                         ASCII_LOWER_r: //read
                             fsm <= {ST_READ_E, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
-                            */
                         default:
                             fsm <= {ST_ERROR, BIOS_ER_UNKNOWN, 1'd0, 1'd0, 8'd0}; // report bad cmd error
                     endcase
@@ -134,7 +133,7 @@ always_ff @(posedge clk)
                         default:
                             fsm <= {ST_ERROR, BIOS_ER_BADCMD, 1'd0, 1'd0, 8'd0}; // report bad cmd error
                     endcase
-          /*  // ==========
+            // ==========
             // BOOT
             // ==========
             ST_BOOT_O1:
@@ -241,7 +240,7 @@ always_ff @(posedge clk)
                             fsm <= {ST_START, BIOS_ER_UNKNOWN, 1'd1, 1'd1, 8'(ASCII_R)};
                         default:
                             fsm <= {ST_ERROR, BIOS_ER_BADCMD, 1'd0, 1'd0, 8'd0}; // report bad cmd error
-                    endcase*/
+                    endcase
             default:
                 fsm <= {ST_START, BIOS_ER_EXCEPTION, 1'd1, 1'd0, 8'd0};
         endcase

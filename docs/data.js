@@ -1,1 +1,1 @@
-function getModules() { return ["ram","rv32i",];}
+function getModules() { return ["bios","ram","rv32i",];}
