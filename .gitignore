@@ -14,3 +14,4 @@ CMakeUserPresets.json
 sim_build
 *.fst
 obj_dir
+*.bak
