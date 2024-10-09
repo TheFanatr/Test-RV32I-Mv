@@ -175,7 +175,7 @@ always_ff @(posedge clk)
                 if(read_en)
                     case (i_data)
                         ASCII_LOWER_t: //rst 
-                            fsm <= {ST_START, BIOS_ER_UNKNOWN, 1'd1, 1'd1, 8'(ASCII_R)};
+                            fsm <= {ST_START, BIOS_ER_UNKNOWN, 1'd1, 1'd1, 8'(ASCII_T)};
                         default:
                             fsm <= {ST_ERROR, BIOS_ER_BADCMD, 1'd0, 1'd0, 8'd0}; // report bad cmd error
                     endcase
