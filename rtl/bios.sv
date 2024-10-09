@@ -88,15 +88,13 @@ assign o_in_ready = fsm.o_in_ready;
 assign o_valid = fsm.o_valid; 
 assign o_data = fsm.o_data; 
 
-initial begin
-    fsm.o_in_ready <= 1; 
-end
-
 wire read_en = i_valid & fsm.o_in_ready;
 always_ff @(posedge clk)
     if(clk_en)
         case (fsm.state)
-            ST_START: 
+            ST_START: begin
+                 fsm.o_in_ready <= 1; 
+                 fsm.o_valid <= 0; 
                 if(read_en)
                     case (i_data)
                         ASCII_LOWER_n: //nop 
@@ -113,6 +111,7 @@ always_ff @(posedge clk)
                         default:
                             fsm <= {ST_ERROR, BIOS_ER_UNKNOWN, 1'd0, 1'd0, 8'd0}; // report bad cmd error
                     endcase
+            end
             ST_ERROR:
                 fsm <= {ST_START, fsm.error, 1'd0, 1'd1, fsm.error}; // WRITE BACK ERROR CODE
             // ==========
