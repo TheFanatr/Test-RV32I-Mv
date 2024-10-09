@@ -104,6 +104,10 @@ module bios #(
 );
 
   
+  dispatcher_state_t dispatcher;
+  none_state_t none;
+	
+ 
   addr_t ram_addr;
 
   bios_opcode_t opcode;
@@ -116,14 +120,18 @@ module bios #(
   //ram
   assign o_byte_enable = 4'b0001;
   //assign o_write_enable = control.o_write_enable;
+	
+  assign o_booted = none.boot;
+  assign o_rst = none.rst;
+  assign o_read_req = none.read_req;
+  assign o_valid = none.serial_out_valid;
 
 
-  none_state_t none;
   always_ff @(posedge clk) begin
     if (rst) begin
             none <= {BN_START, 4'b0_0_0_0}; // reset dispatcher
-    end else if(cycle_en) begin
-      case (dispatcher.state)
+    end else begin
+      case (none.state)
         BN_START:
             if (dispatcher.trigger_no_arg)
                 none <= {BN_ACT, 4'b0_0_0_0};
@@ -144,7 +152,6 @@ module bios #(
   end
 end  
 
-  dispatcher_state_t dispatcher;
   wire read_en = i_valid & o_in_ready; // we are ready to read they are ready to read
   wire cycle_en = clk_en & ~rst & ~o_booted;
   always_ff @(posedge clk) begin
