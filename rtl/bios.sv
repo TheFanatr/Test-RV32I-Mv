@@ -119,7 +119,9 @@ module bios #(
   assign o_data = i_read_data;
 
   always_ff @(posedge clk) begin
-    if (exec)
+    if (rst)
+			control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
+    if (fsm.exec)
         case (opcode)
             BOP_NOP:
                 control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
@@ -149,11 +151,11 @@ module bios #(
   wire read_en = i_valid & fsm.o_in_ready;
   always_ff @(posedge clk) begin
     if (rst) fsm <= {ST_READ_OPCODE, 1'd1, 1'd0};
-    if (clk_en & ~rst & ~fst.o_booted)
+    if (clk_en & ~rst & ~control.o_booted)
       case (fsm.state)
         ST_READ_OPCODE:
         if (read_en) begin
-          opcode <= i_data;
+          opcode <= bios_opcode_t'(i_data);
           fsm <= {ST_READ_A, 1'd1, 1'd0};
         end
         ST_READ_A:
