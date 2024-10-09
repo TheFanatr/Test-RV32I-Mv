@@ -18,7 +18,8 @@
 typedef enum logic [7:0] {  
     ST_START,
 	 
-	 // two rs
+	// two r branch
+    ST_R_BRANCH,
 
     //send error
     ST_ERROR,
@@ -101,18 +102,26 @@ always_ff @(posedge clk)
                             fsm <= {ST_NOP_O, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
                         ASCII_LOWER_b: //boot
                             fsm <= {ST_BOOT_O1, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
-                        //ASCII_LOWER_r: //rst
-                        //    fsm <= {ST_RST_S, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
                         ASCII_LOWER_w: //write
                             fsm <= {ST_WRITE_R, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
-                        ASCII_LOWER_r: //read
-                            fsm <= {ST_READ_E, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
+                        ASCII_LOWER_r: //read or rst
+                            fsm <= {ST_R_BRANCH, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
                         default:
                             fsm <= {ST_ERROR, BIOS_ER_UNKNOWN, 1'd0, 1'd0, 8'd0}; // report bad cmd error
                     endcase
             end
             ST_ERROR:
                 fsm <= {ST_START, fsm.error, 1'd0, 1'd1, fsm.error}; // WRITE BACK ERROR CODE
+            ST_R_BRANCH:
+                if(read_en)
+                    case (i_data)
+                        ASCII_LOWER_s: //rst 
+                            fsm <= {ST_RST_T, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
+                        ASCII_LOWER_e: //read 
+                            fsm <= {ST_READ_A, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
+                        default:
+                            fsm <= {ST_ERROR, BIOS_ER_BADCMD, 1'd0, 1'd0, 8'd0}; // report bad cmd error
+                    endcase
             // ==========
             // NOP
             // ==========
@@ -162,14 +171,6 @@ always_ff @(posedge clk)
             // ==========
             // RST
             // ==========
-            ST_RST_S:
-                if(read_en)
-                    case (i_data)
-                        ASCII_LOWER_s: //rst 
-                            fsm <= {ST_RST_T, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
-                        default:
-                            fsm <= {ST_ERROR, BIOS_ER_BADCMD, 1'd0, 1'd0, 8'd0}; // report bad cmd error
-                    endcase
             ST_RST_T:
                 if(read_en)
                     case (i_data)
@@ -216,14 +217,6 @@ always_ff @(posedge clk)
             // ==========
             // READ
             // ==========
-            ST_READ_E:
-                if(read_en)
-                    case (i_data)
-                        ASCII_LOWER_e: //read 
-                            fsm <= {ST_READ_A, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0};
-                        default:
-                            fsm <= {ST_ERROR, BIOS_ER_BADCMD, 1'd0, 1'd0, 8'd0}; // report bad cmd error
-                    endcase
             ST_READ_A:
                 if(read_en)
                     case (i_data)
