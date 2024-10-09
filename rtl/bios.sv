@@ -265,10 +265,42 @@ always_ff @(posedge clk) begin
                 if(read_en)
                     case (i_data)
                         ASCII_LOWER_e: //write 
-                            fsm <= {ST_WRITE_SIZE0, BIOS_ER_UNKNOWN, 1'd1, 1'd1, 8'(ASCII_W), 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, 32'd0};
+                            fsm <= {ST_WRITE_SIZE0, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, 32'd0};
                         default:
                             fsm <= {ST_ERROR, BIOS_ER_BADCMD, 1'd0, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, 32'd0}; // report bad cmd error
                     endcase
+            ST_WRITE_SIZE0:
+                if(read_en)
+                    fsm <= {ST_WRITE_SIZE1, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, {fsm.size[31:8], i_data}};
+            ST_WRITE_SIZE1:
+                if(read_en)
+                    fsm <= {ST_WRITE_SIZE2, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, {fsm.size[31:16], i_data, fsm.size[7:0]}};
+            ST_WRITE_SIZE2:
+                if(read_en)
+                    fsm <= {ST_WRITE_SIZE3, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, {fsm.size[31:25], i_data, fsm.size[15:0]}};
+            ST_WRITE_SIZE3:
+                if(read_en)
+                    fsm <= {ST_WRITE_SIZE2, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, {i_data, fsm.size[24:0]}};
+            ST_WRITE_ADDR0:
+                if(read_en)
+                    fsm <= {ST_WRITE_ADDR1, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, {fsm.addr[31:8], i_data}, 32'd0, fsm.size};
+            ST_WRITE_ADDR1:
+                if(read_en)
+                    fsm <= {ST_WRITE_ADDR2, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, {fsm.addr[31:16], i_data, fsm.addr[7:0]}, 32'd0, fsm.size};
+            ST_WRITE_ADDR2:
+                if(read_en)
+                    fsm <= {ST_WRITE_ADDR3, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, {fsm.addr[31:25], i_data, fsm.addr[15:0]}, 32'd0, fsm.size};
+            ST_WRITE_ADDR3:
+                if(read_en)
+                    fsm <= {ST_WRITE_DATALOOP, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, {i_data, fsm.addr[24:0]}, 32'd0, fsm.size};
+            ST_WRITE_DATALOOP:
+                if(read_en) begin
+                    if (~(|fsm.size)) begin
+                        fsm <= {ST_WRITE_DATALOOP, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd1, fsm.addr + 1, {i_data, 24'd0}, fsm.size - 1};
+                    end else begin
+                        fsm <= {ST_START, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, 32'd0};
+                    end
+                end
             // ==========
             // READ
             // ==========
