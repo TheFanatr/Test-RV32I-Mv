@@ -98,12 +98,12 @@ module bios #(
 
   //ram
   assign o_byte_enable = 4'b0001;
-  assign o_write_enable = control.o_write_enable;
+  //assign o_write_enable = control.o_write_enable;
   assign o_write_addr = ram_addr;
   assign o_read_addr = ram_addr;
   assign o_write_data = a;
   assign o_data = i_read_data;
-  assign o_read_req = control.o_read_enable;
+  //assign o_read_req = control.o_read_enable;
 
   wire read_en = i_valid & o_in_ready; // we are ready to read they are ready to read
   wire cycle_en = clk_en & ~rst & ~o_booted;
@@ -115,7 +115,7 @@ module bios #(
         BD_READ: // Read char
             dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
         BD_STORE: begin
-            opcode <= i_data;
+            opcode <= bios_opcode_t'(i_data);
             if(opcode < 4) begin 
                 dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
             end else begin
