@@ -20,6 +20,13 @@ typedef enum logic [3:0] {
     BD_TWO
 } bios_dispatcher_state_t; 
 
+typedef enum logic [3:0] {
+    BN_START,
+    BN_ACT,
+    BN_READ,
+    BN_REST
+} bios_none_state_t; 
+
 typedef enum logic [7:0] {
   // no args
   BOP_NOP,      //0
@@ -36,12 +43,22 @@ typedef enum logic [7:0] {
 } bios_opcode_t;
 
 typedef struct packed {
+  bios_none_state_t state;
+  logic boot;
+  logic rst;
+  logic read_req;
+  logic serial_out_valid;
+} none_state_t;
+
+typedef struct packed {
   bios_dispatcher_state_t state;
   logic o_in_ready;  // i can read data atm sure
   logic trigger_no_arg;
   logic trigger_one_arg;
   logic trigger_two_arg;
 } dispatcher_state_t;
+
+
 
 typedef struct packed {
   logic [7:0] a;
@@ -86,7 +103,7 @@ module bios #(
     input  wire         i_out_ready
 );
 
-  dispatcher_state_t dispatcher;
+  
   addr_t ram_addr;
 
   bios_opcode_t opcode;
@@ -99,12 +116,35 @@ module bios #(
   //ram
   assign o_byte_enable = 4'b0001;
   //assign o_write_enable = control.o_write_enable;
-  assign o_write_addr = ram_addr;
-  assign o_read_addr = ram_addr;
-  assign o_write_data = a;
-  assign o_data = i_read_data;
-  //assign o_read_req = control.o_read_enable;
 
+
+  none_state_t none;
+  always_ff @(posedge clk) begin
+    if (rst) begin
+            none <= {BN_START, 4'b0_0_0_0}; // reset dispatcher
+    end else if(cycle_en) begin
+      case (dispatcher.state)
+        BN_START:
+            if (dispatcher.trigger_no_arg)
+                none <= {BN_ACT, 4'b0_0_0_0};
+        BN_ACT:
+            case (opcode)
+                BOP_NOP:
+                    none <= {BN_START, 4'b0_0_0_0};
+                BOP_BOOT:
+                    none <= {BN_START, 4'b1_0_0_0};
+                BOP_RST:
+                    none <= {BN_START, 4'b0_1_0_0};
+                BOP_READ:
+                    none <= {BN_REST, 4'b0_0_1_1};
+            endcase
+        BN_REST:
+            none <= {BN_START, 4'b0_1_0_1};
+      endcase
+  end
+end  
+
+  dispatcher_state_t dispatcher;
   wire read_en = i_valid & o_in_ready; // we are ready to read they are ready to read
   wire cycle_en = clk_en & ~rst & ~o_booted;
   always_ff @(posedge clk) begin
@@ -119,18 +159,18 @@ module bios #(
         if (read_en) begin
             opcode <= bios_opcode_t'(i_data);
             if(opcode < 4) begin 
-                dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
+                dispatcher <= {BD_STORE, 4'b1_1_0_0}; 
             end else begin
                 dispatcher <= {BD_ONE, 4'b1_0_0_0}; 
             end
         end
-        BD_ONE: 
+        BD_ONE:
         if (read_en) begin
             a <= i_data;
             if(opcode > 4) begin 
                 dispatcher <= {BD_TWO, 4'b1_0_0_0}; 
             end else begin
-                dispatcher <= {BD_STORE, 4'b1_1_0_0}; 
+                dispatcher <= {BD_STORE, 4'b1_0_1_0}; 
             end
         end
         BD_TWO: 
@@ -139,7 +179,7 @@ module bios #(
             dispatcher <= {BD_STORE, 4'b1_0_1_0}; 
         end
         default: 
-            dispatcher <= {BD_READ, 4'b1_0_0_0}; // reset dispatcher
+            dispatcher <= {BD_READ, 4'b0_0_0_1}; // reset dispatcher
       endcase
   end
 end
