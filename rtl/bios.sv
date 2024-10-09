@@ -13,33 +13,35 @@
 //      readsize readaddr
 
 
-typedef enum logic [7:0] {
-  ST_READ_OPCODE,
-  ST_READ_A,
-  ST_READ_B,
-  ST_READ_C,
-  ST_EXEC,
-  ST_RESET
-} state_t;
+typedef enum logic [3:0] {
+    BD_READ,
+    BD_STORE,
+    BD_ONE,
+    BD_TWO
+} bios_dispatcher_state_t; 
 
 typedef enum logic [7:0] {
-  BOP_NOP,
-  BOP_BOOT,
-  BOP_RST,
-  BOP_ADR_LOWER,
-  BOP_ADR_UPPER,
-  BOP_WRITE,
-  BOP_READ
+  // no args
+  BOP_NOP,      //0
+  BOP_BOOT,     //1
+  BOP_RST,      //2
+  BOP_READ,     //3
+
+  // one arg
+  BOP_WRITE,    //4
+  
+  // 2 args
+  BOP_ADR_LOWER,//5
+  BOP_ADR_UPPER //6
 } bios_opcode_t;
 
 typedef struct packed {
-  state_t state;
-  // UART
+  bios_dispatcher_state_t state;
   logic o_in_ready;  // i can read data atm sure
-  
-  logic exec;
-  logic reset_control;
-} fsm_state_t;
+  logic trigger_no_arg;
+  logic trigger_one_arg;
+  logic trigger_two_arg;
+} dispatcher_state_t;
 
 typedef struct packed {
   logic [7:0] a;
@@ -47,17 +49,6 @@ typedef struct packed {
   logic [7:0] c;
   logic [7:0] d;
 } addr_t;
-
-typedef struct packed {
-  // UART
-  logic o_valid;  // the data im sending is good to go
-  // CONTROL
-  logic o_rst;
-  logic o_booted;
-  //RAM
-  logic o_write_enable;
-  logic o_read_enable;
-} control_vec_t;
 
 module bios #(
     ADDR_WIDTH = 31,
@@ -85,7 +76,7 @@ module bios #(
      */
     input  wire [8-1:0] i_data,
     input  wire         i_valid,
-    output reg         o_in_ready,
+    output logic         o_in_ready,
 
     /*
      * AXI output
@@ -95,22 +86,15 @@ module bios #(
     input  wire         i_out_ready
 );
 
-  fsm_state_t fsm;
-  control_vec_t control;
-
-
+  dispatcher_state_t dispatcher;
   addr_t ram_addr;
 
   bios_opcode_t opcode;
   logic [7:0] a;
   logic [7:0] b;
-  logic [7:0] c;
 
 
-  assign o_in_ready = fsm.o_in_ready;
-  //assign o_valid = control.o_valid;
-  assign o_rst = control.o_rst;
-  assign o_booted = control.o_booted;
+  assign o_in_ready = dispatcher.o_in_ready;
 
   //ram
   assign o_byte_enable = 4'b0001;
@@ -121,73 +105,37 @@ module bios #(
   assign o_data = i_read_data;
   assign o_read_req = control.o_read_enable;
 
+  wire read_en = i_valid & o_in_ready; // we are ready to read they are ready to read
+  wire cycle_en = clk_en & ~rst & ~o_booted;
   always_ff @(posedge clk) begin
-    if (rst)
-			control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
-    if (fsm.reset_control)
-			control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
-    if (fsm.exec)
-        case (opcode)
-            BOP_NOP:
-                control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
-            BOP_BOOT:
-                control <= {1'd0, 1'd0, 1'd1, 1'd0, 1'd0};
-            BOP_RST: 
-                control <= {1'd0, 1'd1, 1'd0, 1'd0, 1'd0};
-            BOP_ADR_LOWER: begin
-                ram_addr.a <= a;
-                ram_addr.b <= b;
-                control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
+    if (rst) begin
+            dispatcher <= {BD_READ, 4'b1_0_0_0}; // reset dispatcher
+    end else if(cycle_en) begin
+      case (dispatcher.state)
+        BD_READ: // Read char
+            dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
+        BD_STORE:
+            opcode <= i_data;
+            if(opcode < 4) begin 
+                dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
+            end else begin
+                dispatcher <= {BD_ONE, 4'b1_0_0_0}; 
             end
-            BOP_ADR_UPPER: begin
-                ram_addr.c <= a;
-                ram_addr.d <= b;
-                control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
+        BD_ONE:
+            a <= i_data;
+            if(opcode > 4) begin 
+                dispatcher <= {BD_TWO, 4'b1_0_0_0}; 
+            end else begin
+                dispatcher <= {BD_STORE, 4'b1_1_0_0}; 
             end
-            BOP_WRITE:
-                control <= {1'd0, 1'd0, 1'd0, 1'd1, 1'd0};
-            BOP_READ: begin 
-                control <= {1'd1, 1'd0, 1'd0, 1'd0, 1'd1};
-                o_valid <= 1;
-            end
-            default:
-                control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
-        endcase
-  end
-
-  wire read_en = i_valid & fsm.o_in_ready;
-  always_ff @(posedge clk) begin
-    if (rst) fsm <= {ST_READ_OPCODE, 1'd1, 1'd0, 1'd0};
-    if (clk_en & ~rst & ~control.o_booted)
-      case (fsm.state)
-        ST_READ_OPCODE:
-        if (read_en) begin
-          opcode <= bios_opcode_t'(i_data);
-          fsm <= {ST_READ_A, 1'd1, 1'd0, 1'd0};
-        end
-        ST_READ_A:
-        if (read_en) begin
-          a <= i_data;
-          fsm <= {ST_READ_B, 1'd1, 1'd0, 1'd0};
-        end
-        ST_READ_B:
-        if (read_en) begin
-          b <= i_data;
-          fsm <= {ST_READ_C, 1'd1, 1'd0, 1'd0};
-        end
-        ST_READ_C:
-        if (read_en) begin
-          c <= i_data;
-          fsm <= {ST_EXEC,1'd0, 1'd0, 1'd0};
-        end
-        ST_EXEC:
-            fsm <= {ST_READ_OPCODE, 1'd1, 1'd1, 1'd0};
-        // ST_RESET:
-        //     fsm <= {ST_READ_OPCODE, 1'd1, 1'd0, 1'd0};
+        BD_TWO:
+            b <= i_data;
+            dispatcher <= {BD_STORE, 4'b1_0_1_0}; 
         default: 
-            fsm <= {ST_READ_OPCODE, 1'd1, 1'd0, 1'd0};
+            dispatcher <= {BD_READ, 4'b1_0_0_0}; // reset dispatcher
       endcase
   end
+end
 
 `ifdef TESTING1
   always @(posedge clk) begin
