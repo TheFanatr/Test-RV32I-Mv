@@ -1,4 +1,4 @@
-`include "types.svh"
+
 
 module ram #(
     ADDR_WIDTH = 31,
