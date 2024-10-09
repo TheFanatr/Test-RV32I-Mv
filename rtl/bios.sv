@@ -18,7 +18,8 @@ typedef enum logic [7:0] {
   ST_READ_A,
   ST_READ_B,
   ST_READ_C,
-  ST_EXEC
+  ST_EXEC,
+  ST_RESET
 } state_t;
 
 typedef enum logic [7:0] {
@@ -37,6 +38,7 @@ typedef struct packed {
   logic o_in_ready;  // i can read data atm sure
   
   logic exec;
+  logic reset_control;
 } fsm_state_t;
 
 typedef struct packed {
@@ -71,24 +73,24 @@ module bios #(
     // RAM
     output o_read_req,
     output [ADDR_WIDTH:0] o_read_addr,
-    input logic [DATA_WIDTH:0] i_read_data,
+    input wire [DATA_WIDTH:0] i_read_data,
 
     output o_write_enable,
     output [3:0] o_byte_enable,
-    output [ADDR_WIDTH:0] o_write_addr,
-    output [DATA_WIDTH:0] o_write_data,
+    output logic [ADDR_WIDTH:0] o_write_addr,
+    output logic [DATA_WIDTH:0] o_write_data,
 
     /*
      * AXI input
      */
-    input  wire [7-1:0] i_data,
+    input  wire [8-1:0] i_data,
     input  wire         i_valid,
-    output wire         o_in_ready,
+    output reg         o_in_ready,
 
     /*
      * AXI output
      */
-    output wire [7-1:0] o_data,
+    output wire [8-1:0] o_data,
     output wire         o_valid,
     input  wire         i_out_ready
 );
@@ -97,7 +99,6 @@ module bios #(
   control_vec_t control;
 
 
-  logic [7:0] uart_write_data;
   addr_t ram_addr;
 
   bios_opcode_t opcode;
@@ -107,7 +108,7 @@ module bios #(
 
 
   assign o_in_ready = fsm.o_in_ready;
-  assign o_valid = control.o_valid;
+  //assign o_valid = control.o_valid;
   assign o_rst = control.o_rst;
   assign o_booted = control.o_booted;
 
@@ -115,11 +116,15 @@ module bios #(
   assign o_byte_enable = 4'b0001;
   assign o_write_enable = control.o_write_enable;
   assign o_write_addr = ram_addr;
+  assign o_read_addr = ram_addr;
   assign o_write_data = a;
   assign o_data = i_read_data;
+  assign o_read_req = control.o_read_enable;
 
   always_ff @(posedge clk) begin
     if (rst)
+			control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
+    if (fsm.reset_control)
 			control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
     if (fsm.exec)
         case (opcode)
@@ -141,42 +146,46 @@ module bios #(
             end
             BOP_WRITE:
                 control <= {1'd0, 1'd0, 1'd0, 1'd1, 1'd0};
-            BOP_READ:
+            BOP_READ: begin 
                 control <= {1'd1, 1'd0, 1'd0, 1'd0, 1'd1};
+                o_valid <= 1;
+            end
             default:
-            control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
+                control <= {1'd0, 1'd0, 1'd0, 1'd0, 1'd0};
         endcase
   end
 
   wire read_en = i_valid & fsm.o_in_ready;
   always_ff @(posedge clk) begin
-    if (rst) fsm <= {ST_READ_OPCODE, 1'd1, 1'd0};
+    if (rst) fsm <= {ST_READ_OPCODE, 1'd1, 1'd0, 1'd0};
     if (clk_en & ~rst & ~control.o_booted)
       case (fsm.state)
         ST_READ_OPCODE:
         if (read_en) begin
           opcode <= bios_opcode_t'(i_data);
-          fsm <= {ST_READ_A, 1'd1, 1'd0};
+          fsm <= {ST_READ_A, 1'd1, 1'd0, 1'd0};
         end
         ST_READ_A:
         if (read_en) begin
           a <= i_data;
-          fsm <= {ST_READ_B, 1'd1, 1'd0};
+          fsm <= {ST_READ_B, 1'd1, 1'd0, 1'd0};
         end
         ST_READ_B:
         if (read_en) begin
           b <= i_data;
-          fsm <= {ST_READ_C, 1'd1, 1'd0};
+          fsm <= {ST_READ_C, 1'd1, 1'd0, 1'd0};
         end
         ST_READ_C:
         if (read_en) begin
           c <= i_data;
-          fsm <= {ST_EXEC,1'd0, 1'd0};
+          fsm <= {ST_EXEC,1'd0, 1'd0, 1'd0};
         end
         ST_EXEC:
-            fsm <= {ST_READ_OPCODE, 1'd1, 1'd1};
+            fsm <= {ST_READ_OPCODE, 1'd1, 1'd1, 1'd0};
+        // ST_RESET:
+        //     fsm <= {ST_READ_OPCODE, 1'd1, 1'd0, 1'd0};
         default: 
-            fsm <= {ST_READ_OPCODE, 1'd1, 1'd0};
+            fsm <= {ST_READ_OPCODE, 1'd1, 1'd0, 1'd0};
       endcase
   end
 
