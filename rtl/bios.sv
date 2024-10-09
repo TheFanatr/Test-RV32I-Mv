@@ -138,10 +138,11 @@ assign o_write_enable = fsm.o_write_enable;
 assign o_write_addr = fsm.o_write_addr; 
 assign o_write_data = fsm.o_write_data; 
 
-
 wire read_en = i_valid & fsm.o_in_ready;
-always_ff @(posedge clk)
-    if(clk_en)
+always_ff @(posedge clk) begin
+    if(rst)
+        fsm <= {ST_START, BIOS_ER_UNKNOWN, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, 32'd0};
+    if(clk_en & ~rst)
         case (fsm.state)
             ST_START: begin
                  fsm.o_in_ready <= 1; 
@@ -161,10 +162,10 @@ always_ff @(posedge clk)
                     endcase
             end
             ST_ERROR:
-                fsm <= {ST_START, fsm.error, 1'd0, 1'd1, fsm.error, 1'd0, 32'd0, 32'd0, 32'd0}; // WRITE BACK ERROR CODE
+                fsm <= {ST_START, fsm.error, 1'd0, 1'd1, fsm.error, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, 32'd0}; // WRITE BACK ERROR CODE
             ST_BOOT:
                 // we are done simply hlt in this state for ever
-                fsm <= {ST_BOOT, BIOS_ER_UNKNOWN, 1'd1, 1'd1, 8'(ASCII_B), 1'd0, 1'd1, 1'd0, 32'd0, 32'd0, 32'd0};
+                fsm <= {ST_BOOT, BIOS_ER_UNKNOWN,  1'd1, 1'd0, 8'd0, 1'd0, 1'd1, 1'd0, 32'd0, 32'd0, 32'd0};
             ST_R_BRANCH:
                 if(read_en)
                     case (i_data)
@@ -290,6 +291,7 @@ always_ff @(posedge clk)
             default:
                 fsm <= {ST_START, BIOS_ER_EXCEPTION, 1'd1, 1'd0, 8'd0, 1'd0, 1'd0, 1'd0, 32'd0, 32'd0, 32'd0};
         endcase
+end
 
 `ifdef TESTING1
     always @(posedge clk) begin
