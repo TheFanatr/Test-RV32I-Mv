@@ -22,9 +22,7 @@ typedef enum logic [3:0] {
 
 typedef enum logic [3:0] {
     BN_START,
-    BN_ACT,
-    BN_READ,
-    BN_REST
+    BN_ACT
 } bios_none_state_t; 
 
 typedef enum logic [7:0] {
@@ -125,6 +123,7 @@ module bios #(
   assign o_rst = none.rst;
   assign o_read_req = none.read_req;
   assign o_valid = none.serial_out_valid;
+  assign o_data = i_read_data;
 
 
   always_ff @(posedge clk) begin
@@ -135,19 +134,26 @@ module bios #(
         BN_START:
             if (dispatcher.trigger_no_arg)
                 none <= {BN_ACT, 4'b0_0_0_0};
+            else
+                none <= {BN_START, 4'b0_0_0_0};
         BN_ACT:
             case (opcode)
                 BOP_NOP:
                     none <= {BN_START, 4'b0_0_0_0};
                 BOP_BOOT:
-                    none <= {BN_START, 4'b1_0_0_0};
+                    none <= {BN_ACT, 4'b1_0_0_0};
                 BOP_RST:
                     none <= {BN_START, 4'b0_1_0_0};
                 BOP_READ:
-                    none <= {BN_REST, 4'b0_0_1_1};
+                    if(i_out_ready)
+                        none <= {BN_START, 4'b0_0_1_1};
+                    else
+                        none <= {BN_ACT, 4'b0_0_1_1};
+                default:
+                    none <= {BN_START, 4'b0_0_0_0};
             endcase
-        BN_REST:
-            none <= {BN_START, 4'b0_1_0_1};
+        default:
+            none <= {BN_START, 4'b0_0_0_0};
       endcase
   end
 end  
@@ -160,33 +166,32 @@ end
     end else if(cycle_en) begin
       case (dispatcher.state)
         BD_READ: // Read char
-            if (read_en)
-                dispatcher <= {BD_STORE, 4'b1_0_0_0}; 
-        BD_STORE: 
-        if (read_en) begin
-            opcode <= bios_opcode_t'(i_data);
-            if(opcode < 4) begin 
-                dispatcher <= {BD_STORE, 4'b1_1_0_0}; 
+            if (read_en) begin
+					 opcode <= bios_opcode_t'(i_data);
+						if(opcode < 4) begin 
+						 dispatcher <= {BD_READ, 4'b1_1_0_0}; 
+						end else begin
+						 dispatcher <= {BD_ONE, 4'b1_0_0_0}; 
+						end
             end else begin
-                dispatcher <= {BD_ONE, 4'b1_0_0_0}; 
+                dispatcher <= {BD_READ, 4'b1_0_0_0}; 
             end
-        end
         BD_ONE:
         if (read_en) begin
             a <= i_data;
             if(opcode > 4) begin 
                 dispatcher <= {BD_TWO, 4'b1_0_0_0}; 
             end else begin
-                dispatcher <= {BD_STORE, 4'b1_0_1_0}; 
+                dispatcher <= {BD_READ, 4'b1_0_1_0}; 
             end
         end
         BD_TWO: 
         if (read_en) begin
             b <= i_data;
-            dispatcher <= {BD_STORE, 4'b1_0_1_0}; 
+            dispatcher <= {BD_STORE, 4'b1_0_0_1}; 
         end
         default: 
-            dispatcher <= {BD_READ, 4'b0_0_0_1}; // reset dispatcher
+            dispatcher <= {BD_READ, 4'b1_0_0_0}; // reset dispatcher
       endcase
   end
 end
