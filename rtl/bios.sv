@@ -114,7 +114,7 @@ module bios #(
   
   dispatcher_state_t dispatcher;
   none_state_t none;
-  bios_one_state_t one;
+  one_state_t one;
 	
  
   addr_t ram_addr;
