@@ -30,6 +30,11 @@ typedef enum logic [3:0] {
     ONE_ACT
 } bios_one_state_t; 
 
+typedef enum logic [3:0] {
+    TWO_START,
+    TWO_ACT
+} bios_two_state_t; 
+
 typedef enum logic [7:0] {
   // no args
   BOP_NOP,      //0
@@ -59,14 +64,16 @@ typedef struct packed {
 } one_state_t;
 
 typedef struct packed {
+  bios_two_state_t state;
+} two_state_t;
+
+typedef struct packed {
   bios_dispatcher_state_t state;
   logic o_in_ready;  // i can read data atm sure
   logic trigger_no_arg;
   logic trigger_one_arg;
   logic trigger_two_arg;
 } dispatcher_state_t;
-
-
 
 typedef struct packed {
   logic [7:0] a;
@@ -115,14 +122,13 @@ module bios #(
   dispatcher_state_t dispatcher;
   none_state_t none;
   one_state_t one;
-	
+  two_state_t two;
  
   addr_t ram_addr;
 
   bios_opcode_t opcode;
   logic [7:0] a;
   logic [7:0] b;
-
 
   assign o_in_ready = dispatcher.o_in_ready;
 
@@ -133,14 +139,47 @@ module bios #(
   assign o_rst = none.rst;
   assign o_read_req = none.read_req;
   assign o_valid = none.serial_out_valid;
-  assign o_data = i_read_data;
+  assign o_data = i_read_data[7:0];
   assign o_write_enable = one.write_enable;
   assign o_write_addr = ram_addr;
+  assign o_read_addr = ram_addr;
+  assign o_write_data = a;
 
 
 always_ff @(posedge clk) begin
     if (rst) begin
-            one <= {ONE_START, 1'b0}; // reset dispatcher
+            two <= {TWO_START}; 
+    end else begin
+      case (two.state)
+        TWO_START:
+            if (dispatcher.trigger_two_arg)
+                two <= {TWO_ACT};
+            else
+                two <= {TWO_START};
+        TWO_ACT:
+             case (opcode)
+                BOP_ADR_LOWER: begin
+                    ram_addr.a <= a;
+                    ram_addr.b <= b;
+                    two <= {TWO_START};
+                end
+                BOP_ADR_UPPER: begin
+                    ram_addr.c <= a;
+                    ram_addr.d <= b;
+                    two <= {TWO_START};
+                end
+                default:
+                    two <= {TWO_START};
+            endcase
+        default:
+            two <= {TWO_START};
+      endcase
+  end
+end  
+
+always_ff @(posedge clk) begin
+    if (rst) begin
+            one <= {ONE_START, 1'b0}; 
     end else begin
       case (one.state)
         ONE_START:
@@ -149,8 +188,9 @@ always_ff @(posedge clk) begin
             else
                 one <= {ONE_START, 1'b0};
         ONE_ACT:
-            if(opcode == BOP_WRITE)
+            if(opcode == BOP_WRITE) begin
                 one <= {ONE_START, 1'b1};
+            end
         default:
             one <= {ONE_START, 1'b0};
       endcase
@@ -176,9 +216,9 @@ end
                 BOP_RST:
                     none <= {BN_START, 4'b0_1_0_0};
                 BOP_READ:
-                    if(i_out_ready)
+                    if(i_out_ready) begin
                         none <= {BN_START, 4'b0_0_1_1};
-                    else
+                    end else
                         none <= {BN_ACT, 4'b0_0_1_1};
                 default:
                     none <= {BN_START, 4'b0_0_0_0};
@@ -198,28 +238,28 @@ end
       case (dispatcher.state)
         BD_READ: // Read char
             if (read_en) begin
-					 opcode <= bios_opcode_t'(i_data);
-						if(opcode < 4) begin 
-						 dispatcher <= {BD_READ, 4'b1_1_0_0}; 
-						end else begin
-						 dispatcher <= {BD_ONE, 4'b1_0_0_0}; 
-						end
+					opcode <= bios_opcode_t'(i_data);
+                    if(i_data < 4) begin 
+                        dispatcher <= {BD_READ, 4'b1_1_0_0}; 
+                    end else begin
+                        dispatcher <= {BD_ONE, 4'b1_0_0_0}; 
+                    end
             end else begin
                 dispatcher <= {BD_READ, 4'b1_0_0_0}; 
             end
         BD_ONE:
         if (read_en) begin
             a <= i_data;
-            if(opcode > 4) begin 
-                dispatcher <= {BD_TWO, 4'b1_0_0_0}; 
-            end else begin
+            if(opcode == 4) begin 
                 dispatcher <= {BD_READ, 4'b1_0_1_0}; 
+            end else begin
+                dispatcher <= {BD_TWO, 4'b1_0_0_0}; 
             end
         end
         BD_TWO: 
         if (read_en) begin
             b <= i_data;
-            dispatcher <= {BD_STORE, 4'b1_0_0_1}; 
+            dispatcher <= {BD_READ, 4'b1_0_0_1}; 
         end
         default: 
             dispatcher <= {BD_READ, 4'b1_0_0_0}; // reset dispatcher
