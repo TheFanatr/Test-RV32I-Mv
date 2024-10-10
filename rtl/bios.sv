@@ -25,6 +25,11 @@ typedef enum logic [3:0] {
     BN_ACT
 } bios_none_state_t; 
 
+typedef enum logic [3:0] {
+    ONE_START,
+    ONE_ACT
+} bios_one_state_t; 
+
 typedef enum logic [7:0] {
   // no args
   BOP_NOP,      //0
@@ -47,6 +52,11 @@ typedef struct packed {
   logic read_req;
   logic serial_out_valid;
 } none_state_t;
+
+typedef struct packed {
+  bios_one_state_t state;
+  logic write_enable;
+} one_state_t;
 
 typedef struct packed {
   bios_dispatcher_state_t state;
@@ -104,6 +114,7 @@ module bios #(
   
   dispatcher_state_t dispatcher;
   none_state_t none;
+  bios_one_state_t one;
 	
  
   addr_t ram_addr;
@@ -117,14 +128,34 @@ module bios #(
 
   //ram
   assign o_byte_enable = 4'b0001;
-  //assign o_write_enable = control.o_write_enable;
 	
   assign o_booted = none.boot;
   assign o_rst = none.rst;
   assign o_read_req = none.read_req;
   assign o_valid = none.serial_out_valid;
   assign o_data = i_read_data;
+  assign o_write_enable = one.write_enable;
+  assign o_write_addr = ram_addr;
 
+
+always_ff @(posedge clk) begin
+    if (rst) begin
+            one <= {ONE_START, 1'b0}; // reset dispatcher
+    end else begin
+      case (one.state)
+        ONE_START:
+            if (dispatcher.trigger_one_arg)
+                one <= {ONE_ACT, 1'b0};
+            else
+                one <= {ONE_START, 1'b0};
+        ONE_ACT:
+            if(opcode == BOP_WRITE)
+                one <= {ONE_START, 1'b1};
+        default:
+            one <= {ONE_START, 1'b0};
+      endcase
+  end
+end  
 
   always_ff @(posedge clk) begin
     if (rst) begin
