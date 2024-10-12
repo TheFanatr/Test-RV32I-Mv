@@ -1,9 +1,12 @@
 #include "Vrv32i.h"
 #include "verilated.h"
 #include "verilated_fst_c.h"
+#include "uartsim.h"
 Vrv32i *top;
 VerilatedContext *contextp;
 VerilatedFstC *tfp;
+
+UARTSIM *uart;
 
 void step() {
   contextp->timeInc(1);
@@ -18,6 +21,9 @@ int main(int argc, char **argv) {
   tfp = new VerilatedFstC;
   top = new Vrv32i{contextp};
   top->trace(tfp, 99);
+
+  uart = new UARTSIM(8880);
+  uart->setup(0x005161);
 
   tfp->open("run.fst");
   top->clk = 0;
@@ -53,13 +59,25 @@ int main(int argc, char **argv) {
   top->clk = !top->clk;
   step();
 
-  // while (!contextp->gotFinish()) {
-  for (int i = 0; i < 300; i++) {
+  while (!top->booted) {
+    	  top->clk = 1;
+				top->eval();
+				top->clk = 0;
+				top->eval();
+
+      top->rx = (*uart)(top->tx);
+  }
+
+  //while (!contextp->gotFinish()) {
+  for (int i = 0; i < 1000; i++) {
     contextp->timeInc(1);
+    	  top->clk = 1;
+				top->eval();
+				top->clk = 0;
+				top->eval();
 
-    top->clk = !top->clk;
+    top->rx = (*uart)(top->tx);
 
-    top->eval();
     tfp->dump(contextp->time());
   }
 

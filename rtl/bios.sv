@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 // 2 STATES: BOOT; RUN
 // BOOT = listening for commands
 // RUN = stops listening for commands and simply forwards rx and tx directly to cpu gpio system
