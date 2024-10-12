@@ -117,10 +117,20 @@ module rv32i (
   );
   wire bios_rst;
 
-  core u_core(
-  .clk(clk),
-  .clk_en(clk_en),
-  .rst(rst | bios_rst)
+  core u_core (
+    .clk(clk),
+    .clk_en(clk_en),
+    .rst(rst | bios_rst),
+
+      // RAM
+    .o_read_req(rc_read_req),
+    .o_read_addr(rc_read_addr),
+    .i_read_data(read_data),
+
+    .o_write_enable(rc_write_enable),
+    .o_byte_enable(rc_byte_enable),
+    .o_write_addr(rc_write_addr),
+    .o_write_data(rc_write_data)
   );
 
   bios u_bios(
