@@ -10,37 +10,33 @@ module Top #
 	output wire txd,
 	output wire en_out
 );
-		//send
-		logic [DATA_WIDTH-1:0]  s_axis_tdata;
-		wire                   s_axis_tvalid;
-		wire             	    s_axis_tready;
 
-
-	  //in
-     wire [DATA_WIDTH-1:0]  m_axis_tdata;
-     wire                   m_axis_tvalid;
-     wire                   m_axis_tready;
-	 
-
-	 assign s_axis_tvalid = m_axis_tvalid;
-		 assign s_axis_tready = m_axis_tready; 
-	 
-	 always_ff @(posedge clk_sys) begin
-			s_axis_tdata <= m_axis_tdata + 1;
-	 end
-	 
-
-    wire tx_busy;
-    wire rx_busy;
-    wire rx_overrun_error;
-    wire rx_frame_error;
-
-	
 
 
 	wire clk_sys;
 	wire clk_locked;
 	wire async_rst;
+	
+	//		 .clk(clk_sys),
+	//	 .rst(sync_rst_sys),
+
+ 
+	 rv32i u_rv32i (
+    .clk(clk_sys),
+    .clk_en(1),
+    .rst(sync_rst_sys),
+
+    //UART
+    .rx(rxd),
+    .tx(txd),
+
+    //Booted
+    .booted(en_out)
+	);
+	
+
+	
+
 
 	pll	pll_inst (
 		.areset ( async_rst ),
@@ -85,105 +81,11 @@ module Top #
 	end
 	wire sync_rst_sys = sys_rst_delay_current; //reset
 	
-	assign en_out = ~clk_en_sys;
 
-uart
-	uart_inst (
-		 .clk(clk_sys),
-		 .rst(sync_rst_sys),
-		 // AXI input
-		 .s_axis_tdata(s_axis_tdata),
-		 .s_axis_tvalid(s_axis_tvalid),
-		 .s_axis_tready(s_axis_tready),
-		 // AXI output
-		 .m_axis_tdata(m_axis_tdata),
-		 .m_axis_tvalid(m_axis_tvalid),
-		 .m_axis_tready(m_axis_tready),
-		 // uart
-		 .rxd(rxd),
-		 .txd(txd),
-		 // status
-		 .tx_busy(tx_busy),
-		 .rx_busy(rx_busy),
-		 .rx_overrun_error(rx_overrun_error),
-		 .rx_frame_error(rx_overrun_error),
-		 // configuration
-		 .prescale(50000000 / (9600 * 8))
-	);
 
 endmodule
 
 
-
-
-
-/*
-module Top11 #
-(
-    parameter DATA_WIDTH = 8
-)(
-	input  wire clk,
-	input  wire rst,
-	
-	input  wire rxd,
-	output wire txd
-
-);
-	wire c0_sig;
-
-
-
-
-     logic [DATA_WIDTH-1:0]  s_axis_tdata;
-     wire                   s_axis_tvalid;
-     wire             	    s_axis_tready;
-
-
-     wire [DATA_WIDTH-1:0]  m_axis_tdata;
-     wire                   m_axis_tvalid;
-     wire                   m_axis_tready;
-	 
-	
-	 assign s_axis_tvalid = m_axis_tvalid;
-	 assign s_axis_tready = m_axis_tready;
-	 
-	 always @(posedge c0_sig) begin
-		s_axis_tdata <= m_axis_tdata + 2;
-	 end
-	 
-
-    wire tx_busy;
-    wire rx_busy;
-    wire rx_overrun_error;
-    wire rx_frame_error;
-
-	uart
-	uart_inst (
-		 .clk(c0_sig),
-		 .rst(rst),
-		 // AXI input
-		 .s_axis_tdata(s_axis_tdata),
-		 .s_axis_tvalid(s_axis_tvalid),
-		 .s_axis_tready(s_axis_tready),
-		 // AXI output
-		 .m_axis_tdata(m_axis_tdata),
-		 .m_axis_tvalid(m_axis_tvalid),
-		 .m_axis_tready(m_axis_tready),
-		 // uart
-		 .rxd(rxd),
-		 .txd(txd),
-		 // status
-		 .tx_busy(tx_busy),
-		 .rx_busy(rx_busy),
-		 .rx_overrun_error(rx_overrun_error),
-		 .rx_frame_error(rx_overrun_error),
-		 // configuration
-		 .prescale(50000000 / (9600 * 8))
-	);
-  
-
-endmodule
-*/
 
 
 /**

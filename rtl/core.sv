@@ -1,6 +1,9 @@
 `timescale 1ns / 1ps
 
-module core (
+module core #(
+    ADDR_WIDTH = 31,
+    DATA_WIDTH = 31
+)(
     input clk,
     input clk_en,
     input rst,
@@ -8,7 +11,8 @@ module core (
     // RAM
     output o_read_req,
     output [ADDR_WIDTH:0] o_read_addr,
-    input wire [DATA_WIDTH:0] i_read_data,
+    input  [DATA_WIDTH:0] i_read_data,
+    input  i_read_ready, // wait untill read is ready
 
     output o_write_enable,
     output [3:0] o_byte_enable,
