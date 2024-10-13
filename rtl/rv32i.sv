@@ -28,7 +28,12 @@ module rv32i (
   wire rx_overrun_error;
   wire rx_frame_error;
 
-  // RAM
+  // RAM 
+  
+  wire [31:0] fetch_addr;
+  wire [31:0] fetch_data;
+  
+  
   wire read_req;
   wire [31:0] read_addr;
   wire [31:0] read_data;
@@ -107,6 +112,8 @@ module rv32i (
   .i_read_req(read_req),
   .i_read_addr(read_addr),
   .o_read_data(read_data),
+  .i_read_fetch_addr(fetch_addr),
+  .o_read_fetch_data(fetch_data),
 
 
   // Write
@@ -119,13 +126,16 @@ module rv32i (
 
   core u_core (
     .clk(clk),
-    .clk_en(clk_en),
+    .clk_en(booted),
     .rst(rst | bios_rst),
 
       // RAM
     .o_read_req(rc_read_req),
     .o_read_addr(rc_read_addr),
     .i_read_data(read_data),
+
+    .o_read_fetch_addr(fetch_addr),
+    .i_read_fetch_data(fetch_data),
 
     .o_write_enable(rc_write_enable),
     .o_byte_enable(rc_byte_enable),

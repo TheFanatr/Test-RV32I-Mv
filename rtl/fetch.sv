@@ -1,6 +1,24 @@
 `timescale 1ns / 1ps
 
-module fetch (
+module fetch #(
+    ADDR_WIDTH = 31,
+    DATA_WIDTH = 31
+)(
+    input clk,
+    input clk_en,
+    input rst,
+
+    input [31:0] i_pc,
+
+    //RAM
+    output [ADDR_WIDTH:0] o_read_fetch_addr,
+    input  [DATA_WIDTH:0] i_read_fetch_data,
+
+    output logic [31:0] o_instruction
 );
-    
+
+    assign o_read_fetch_addr = i_pc;
+
+    always_ff @(posedge clk)
+            o_instruction <= i_read_fetch_data;
 endmodule

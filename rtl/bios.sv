@@ -9,7 +9,8 @@ typedef enum logic [3:0] {
 
 typedef enum logic [3:0] {
     BN_START,
-    BN_ACT
+    BN_ACT,
+    BN_DIE
 } bios_none_state_t; 
 
 typedef enum logic [3:0] {
@@ -220,7 +221,7 @@ end
                 BOP_NOP:
                     none <= {BN_START, 4'b0_0_0_0};
                 BOP_BOOT:
-                    none <= {BN_ACT, 4'b1_0_0_0};
+                    none <= {BN_DIE, 4'b1_1_0_0};
                 BOP_RST:
                     none <= {BN_START, 4'b0_1_0_0};
                 BOP_READ_ONE:
@@ -250,6 +251,9 @@ end
                 default:
                     none <= {BN_START, 4'b0_0_0_0};
             endcase
+        BN_DIE:
+            none <= {BN_DIE, 4'b1_0_0_0};
+
         default:
             none <= {BN_START, 4'b0_0_0_0};
       endcase

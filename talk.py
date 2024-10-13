@@ -239,6 +239,7 @@ def talk(link, data):
 
     # Send BOOT opcode at the end if boot is True
     if BOOT:
+        send(Codes.RST.raw_bytes, MAJOR_PAUSE)
         send(Codes.BOOT.raw_bytes, MAJOR_PAUSE)
         report(Levels.Status, "Sent boot command.")
 

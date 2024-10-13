@@ -9,9 +9,9 @@ VerilatedFstC *tfp;
 UARTSIM *uart;
 
 void step() {
-  contextp->timeInc(1);
+  //contextp->timeInc(1);
   top->eval();
-  tfp->dump(contextp->time());
+  //tfp->dump(contextp->time());
 }
 
 int main(int argc, char **argv) {
@@ -25,7 +25,6 @@ int main(int argc, char **argv) {
   uart = new UARTSIM(8880);
   uart->setup(0x005161);
 
-  tfp->open("run.fst");
   top->clk = 0;
   step();
 
@@ -60,7 +59,7 @@ int main(int argc, char **argv) {
   step();
 
   while (!top->booted) {
-      contextp->timeInc(1);
+      // contextp->timeInc(1);
 
     	  top->clk = 1;
 				top->eval();
@@ -68,20 +67,24 @@ int main(int argc, char **argv) {
 				top->eval();
 
       top->rx = (*uart)(top->tx);
-       tfp->dump(contextp->time());
+      //  tfp->dump(contextp->time());
   }
 
-  //while (!contextp->gotFinish()) {
-  for (int i = 0; i < 1000; i++) {
-    contextp->timeInc(1);
+  tfp->open("run.fst");
+  while (!contextp->gotFinish()) {
+  //for (int i = 0; i < 10; i++) {
+        contextp->timeInc(1);
+
     	  top->clk = 1;
 				top->eval();
+        tfp->dump(contextp->time());
+
+        contextp->timeInc(1);
 				top->clk = 0;
 				top->eval();
+        tfp->dump(contextp->time());
 
-    top->rx = (*uart)(top->tx);
-
-    tfp->dump(contextp->time());
+        top->rx = (*uart)(top->tx);
   }
 
   tfp->close();

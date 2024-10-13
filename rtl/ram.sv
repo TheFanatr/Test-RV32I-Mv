@@ -14,6 +14,10 @@ module ram #(
     output logic [DATA_WIDTH:0] o_read_data,
 
 
+    //Read fetch
+    input [ADDR_WIDTH:0] i_read_fetch_addr,
+    output logic [DATA_WIDTH:0] o_read_fetch_data,
+
     // Write
     input i_write_enable,
     input [3:0] i_byte_enable,
@@ -37,10 +41,10 @@ module ram #(
 `endif
 
 //2**ADDR_WIDTH - 1 
-(* ram_style = "block" *) logic [7:0] mem_a [9-1:0];
-(* ram_style = "block" *) logic [7:0] mem_b [9-1:0];
-(* ram_style = "block" *) logic [7:0] mem_c [9-1:0];
-(* ram_style = "block" *) logic [7:0] mem_d [9-1:0];
+(* ram_style = "block" *) logic [7:0] mem_a [4096-1:0];
+(* ram_style = "block" *) logic [7:0] mem_b [4096-1:0];
+(* ram_style = "block" *) logic [7:0] mem_c [4096-1:0];
+(* ram_style = "block" *) logic [7:0] mem_d [4096-1:0];
 
 
 always_ff @(posedge clk) begin
@@ -65,6 +69,11 @@ always_ff @(posedge clk) begin
         if (i_read_req) begin
             o_read_data <= {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
         end 
+end
+
+always_ff @(posedge clk) begin
+    if (clk_en)
+            o_read_fetch_data <= {mem_d[i_read_fetch_addr], mem_c[i_read_fetch_addr], mem_b[i_read_fetch_addr], mem_a[i_read_fetch_addr]};
 end
 
 endmodule
