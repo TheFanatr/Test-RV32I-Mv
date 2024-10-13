@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "talk",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "talk.py",
+      "args": [
+        "--host", "localhost", 
+        "--port", "8880", 
+        "--retry-interval", "5", 
+        
+        "--minor-pause", "0.0", 
+        "--major-pause", "0.0", 
+        
+        "--write", 
+        "--check", "Write", 
+        "--file", "tmp/main.bin", 
+        "--target-address", "0x00000000", 
+        
+        "--boot", 
+        
+        "--verbose", "Fatal,Error,Status"
+      ]
+    }
+  ]
+}
