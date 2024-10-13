@@ -158,12 +158,12 @@ def talk(link, data):
             if upper_address != previous_upper_address:
                 # Send opcode and data
                 send(Codes.ADR_LOWER.raw_bytes, MINOR_PAUSE)  #FIXME - Use ADR_UPPER
-                send(upper_address.to_bytes(2, byteorder='little'), MAJOR_PAUSE)  #FIXME - Use byteorder='big'
+                send(upper_address.to_bytes(2, byteorder='big'), MAJOR_PAUSE)  #FIXME - Use byteorder='big'
                 previous_upper_address = upper_address
 
             # Send ADR_LOWER opcode and lower address
             send(Codes.ADR_UPPER.raw_bytes, MINOR_PAUSE)  #FIXME - Use ADR_LOWER
-            send(lower_address.to_bytes(2, byteorder='little'), MAJOR_PAUSE)  #FIXME - Use byteorder='big'
+            send(lower_address.to_bytes(2, byteorder='big'), MAJOR_PAUSE)  #FIXME - Use byteorder='big'
 
             # Call the function
             action(item, iota, count)

@@ -37,10 +37,11 @@ module ram #(
 `endif
 
 //2**ADDR_WIDTH - 1 
-(* ram_style = "block" *) logic [7:0] mem_a [99-1:0];
-(* ram_style = "block" *) logic [7:0] mem_b [99-1:0];
-(* ram_style = "block" *) logic [7:0] mem_c [99-1:0];
-(* ram_style = "block" *) logic [7:0] mem_d [99-1:0];
+(* ram_style = "block" *) logic [7:0] mem_a [9-1:0];
+(* ram_style = "block" *) logic [7:0] mem_b [9-1:0];
+(* ram_style = "block" *) logic [7:0] mem_c [9-1:0];
+(* ram_style = "block" *) logic [7:0] mem_d [9-1:0];
+
 
 always_ff @(posedge clk) begin
     if (clk_en) begin

@@ -60,12 +60,15 @@ int main(int argc, char **argv) {
   step();
 
   while (!top->booted) {
+      contextp->timeInc(1);
+
     	  top->clk = 1;
 				top->eval();
 				top->clk = 0;
 				top->eval();
 
       top->rx = (*uart)(top->tx);
+       tfp->dump(contextp->time());
   }
 
   //while (!contextp->gotFinish()) {
