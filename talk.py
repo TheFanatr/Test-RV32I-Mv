@@ -152,18 +152,18 @@ def talk(link, data):
             upper_address = (address_counter >> 16) & 0xFFFF
             lower_address = address_counter & 0xFFFF
 
-            report(Levels.Calculation, f"calculation: address_upper={hex(lower_address)} address_lower={hex(upper_address)}") #FIXME - Use upper_address for upper_address lower_address for lower_address
+            report(Levels.Calculation, f"calculation: address_upper={hex(upper_address)} address_lower={hex(lower_address)}")
 
             # Update upper address if it changed
             if upper_address != previous_upper_address:
                 # Send opcode and data
-                send(Codes.ADR_LOWER.raw_bytes, MINOR_PAUSE)  #FIXME - Use ADR_UPPER
-                send(upper_address.to_bytes(2, byteorder='big'), MAJOR_PAUSE)  #FIXME - Use byteorder='big'
+                send(Codes.ADR_UPPER.raw_bytes, MINOR_PAUSE)  
+                send(upper_address.to_bytes(2, byteorder='big'), MAJOR_PAUSE) 
                 previous_upper_address = upper_address
 
             # Send ADR_LOWER opcode and lower address
-            send(Codes.ADR_UPPER.raw_bytes, MINOR_PAUSE)  #FIXME - Use ADR_LOWER
-            send(lower_address.to_bytes(2, byteorder='big'), MAJOR_PAUSE)  #FIXME - Use byteorder='big'
+            send(Codes.ADR_LOWER.raw_bytes, MINOR_PAUSE)  
+            send(lower_address.to_bytes(2, byteorder='big'), MAJOR_PAUSE) 
 
             # Call the function
             action(item, iota, count)

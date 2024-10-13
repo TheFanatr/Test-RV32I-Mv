@@ -161,13 +161,13 @@ always_ff @(posedge clk) begin
         TWO_ACT:
              case (opcode)
                 BOP_ADR_LOWER: begin
-                    ram_addr.a <= a;
-                    ram_addr.b <= b;
+                    ram_addr.c <= a;
+                    ram_addr.d <= b;
                     two <= {TWO_START};
                 end
                 BOP_ADR_UPPER: begin
-                    ram_addr.c <= a;
-                    ram_addr.d <= b;
+                    ram_addr.a <= a;
+                    ram_addr.b <= b;
                     two <= {TWO_START};
                 end
                 default:
