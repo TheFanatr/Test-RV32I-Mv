@@ -66,11 +66,11 @@ MAJOR_PAUSE = 0.0
 WRITE = True
 CHECK = Checks.Off  # Default check mode
 FILE = 'firmware/obj_dir/main.bin'
-START_ADDRESS = 0x00000000  # Default target address
+START_ADDRESS = 0x00000000  # Default start address
 
 BOOT = True
 
-VERBOSE = Levels.Fatal | Levels.Error | Levels.Status  # Default to Fatal, Error, and Status
+LEVEL = Levels.Fatal | Levels.Error | Levels.Status  # Default to Fatal, Error, and Status
 
 class Codes(Enum):
     NOP = 0x00
@@ -86,9 +86,9 @@ class Codes(Enum):
         return bytes([self.value])
 
 def report(level: Levels, *args, **kwargs):
-    if level in VERBOSE:
-        if Levels.Progress in level and not VERBOSE.synchronous:
-            print(f'\r' + [*args[0:1], ''][0], *args[1:], end='', flush=True, **kwargs)
+    if level in LEVEL:
+        if Levels.Progress in level and not LEVEL.synchronous:
+            print(f'\r{[*args[0:1], ''][0]}', *args[1:], end='', flush=True, **kwargs)
             return
 
         print(*args, file=sys.stderr if level.errors else None, **kwargs)
@@ -136,7 +136,7 @@ def talk(link, data):
         if pause > 0:
             time.sleep(pause)
 
-    # Initialize address_counter with TARGET_ADDRESS
+    # Initialize address_counter with START_ADDRESS
     address_counter = START_ADDRESS
 
     # Define per_address function
@@ -202,7 +202,7 @@ def talk(link, data):
                 check(byte)
 
             # Progress reporting
-            if Levels.Progress in VERBOSE:
+            if Levels.Progress in LEVEL:
                 status = 'Writing and Verifying' if CHECK == Checks.Write else 'Writing'
                 report(Levels.Progress, f"{status}: Byte {iota+1}/{count}")
 
@@ -217,7 +217,7 @@ def talk(link, data):
             check(expected_byte)
 
             # Progress reporting
-            if Levels.Progress in VERBOSE:
+            if Levels.Progress in LEVEL:
                 report(Levels.Progress, f"Verifying: Byte {iota+1}/{count}", flush=True)
 
         report(Levels.Status, "Starting data verification...")
@@ -255,8 +255,8 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--boot', action='store_true', default=BOOT,
                         help=f'Enable boot command after operations (default: {BOOT})')
 
-    parser.add_argument('-o', '--log-level', type=lambda value: Levels.of(Levels[item.strip()] for item in value.replace('|', ',').split(',')), default=VERBOSE,
-                        help=f'Verbose mode: {", ".join(level.name for level in Levels)} (default: {",".join(level.name for level in VERBOSE)})')
+    parser.add_argument('-o', '--log-level', type=lambda value: Levels.of(Levels[item.strip()] for item in value.replace('|', ',').split(',')), default=LEVEL,
+                        help=f'Output/log level: Off, {", ".join(level.name for level in Levels)} (default: {",".join(level.name for level in LEVEL)})')
     args = parser.parse_args()
 
     HOST = args.host
@@ -273,6 +273,6 @@ if __name__ == '__main__':
 
     BOOT = args.boot
 
-    VERBOSE = args.log_level
+    LEVEL = args.log_level
 
     start()
