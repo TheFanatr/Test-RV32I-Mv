@@ -16,3 +16,4 @@ sim_build
 obj_dir
 *.bak
 __pycache__
+*.fst.hier

@@ -191,7 +191,7 @@ def talk(link, data):
 
         for _ in range(2): #FIXME - don't do update read
             # Send READ opcode
-            send(Codes(Codes.WRITE_ONE.value + (byte_address_counter & 0b11)).raw_bytes)
+            send(Codes(Codes.READ_ONE.value + (byte_address_counter & 0b11)).raw_bytes)
 
             # Read one byte from the socket (blocking)
             received_byte = link.recv(1, socket.MSG_WAITALL)
@@ -231,7 +231,7 @@ def talk(link, data):
 
             # Progress reporting
             if Levels.Progress in LEVEL:
-                report(Levels.Progress, f"Verifying: Byte {iota+1}/{count}", flush=True)
+                report(Levels.Progress, f"Verifying: Byte {iota+1}/{count}")
 
         report(Levels.Status, "Starting data verification...")
         address_per(enumerable=data, action=check_action, reset_address=START_ADDRESS)

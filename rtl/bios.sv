@@ -1,20 +1,5 @@
 `timescale 1ns / 1ps
 
-// 2 STATES: BOOT; RUN
-// BOOT = listening for commands
-// RUN = stops listening for commands and simply forwards rx and tx directly to cpu gpio system
-
-// BOOT MODE COMMANDS
-// ===========================
-// nop; does nothing will be zero
-// boot; enters into boot mode
-// rst; triger internal reset of cpu
-// write; write to ram
-//      writesize writeaddr data
-// read; read from ram
-//      readsize readaddr
-
-
 typedef enum logic [3:0] {
     BD_READ,
     BD_STORE,
@@ -39,20 +24,24 @@ typedef enum logic [3:0] {
 
 typedef enum logic [7:0] {
   // no args
-  BOP_NOP,      //0
-  BOP_BOOT,     //1
-  BOP_RST,      //2
-  BOP_READ,     //3
+  BOP_NOP,          //0
+  BOP_BOOT,         //1
+  BOP_RST,          //2
+
+  BOP_READ_ONE,     //3
+  BOP_READ_TWO,     //4
+  BOP_READ_THREE,   //5
+  BOP_READ_FOUR,    //6
 
   // one arg
-  BOP_WRITE_ONE,    //4
-  BOP_WRITE_TWO,    //5
-  BOP_WRITE_THREE,  //6
-  BOP_WRITE_FOUR,   //7
+  BOP_WRITE_ONE,    //7
+  BOP_WRITE_TWO,    //8
+  BOP_WRITE_THREE,  //9
+  BOP_WRITE_FOUR,   //10
   
   // 2 args
-  BOP_ADR_LOWER,//8
-  BOP_ADR_UPPER //9
+  BOP_ADR_LOWER,    //11
+  BOP_ADR_UPPER     //12
 } bios_opcode_t;
 
 typedef struct packed {
@@ -118,7 +107,7 @@ module bios #(
     /*
      * AXI output
      */
-    output wire [8-1:0] o_data,
+    output logic [8-1:0] o_data,
     output wire         o_valid,
     input  wire         i_out_ready
 );
@@ -140,8 +129,7 @@ module bios #(
   assign o_booted = none.boot;
   assign o_rst = none.rst;
   assign o_read_req = none.read_req;
-  assign o_valid = none.serial_out_valid;
-  assign o_data = i_read_data[7:0];
+  assign o_valid = none.serial_out_valid; 
   assign o_write_enable = one.write_enable;
   assign o_write_addr = ram_addr;
   assign o_read_addr = ram_addr;
@@ -235,8 +223,27 @@ end
                     none <= {BN_ACT, 4'b1_0_0_0};
                 BOP_RST:
                     none <= {BN_START, 4'b0_1_0_0};
-                BOP_READ:
+                BOP_READ_ONE:
                     if(i_out_ready) begin
+                        o_data <= i_read_data[7:0];
+                        none <= {BN_START, 4'b0_0_1_1};
+                    end else
+                        none <= {BN_ACT, 4'b0_0_1_1};
+                BOP_READ_TWO:
+                    if(i_out_ready) begin
+                        o_data <= i_read_data[15:8];
+                        none <= {BN_START, 4'b0_0_1_1};
+                    end else
+                        none <= {BN_ACT, 4'b0_0_1_1};
+                BOP_READ_THREE:
+                    if(i_out_ready) begin
+                        o_data <= i_read_data[23:16];
+                        none <= {BN_START, 4'b0_0_1_1};
+                    end else
+                        none <= {BN_ACT, 4'b0_0_1_1};
+                BOP_READ_FOUR:
+                    if(i_out_ready) begin
+                        o_data <= i_read_data[31:24];
                         none <= {BN_START, 4'b0_0_1_1};
                     end else
                         none <= {BN_ACT, 4'b0_0_1_1};
@@ -259,7 +266,7 @@ end
         BD_READ: // Read char
             if (read_en) begin
 					opcode <= bios_opcode_t'(i_data);
-                    if(i_data < 4) begin 
+                    if(i_data < 7) begin 
                         dispatcher <= {BD_READ, 4'b1_1_0_0}; 
                     end else begin
                         dispatcher <= {BD_ONE, 4'b1_0_0_0}; 
@@ -270,7 +277,7 @@ end
         BD_ONE:
         if (read_en) begin
             a <= i_data;
-            if(opcode < 8) begin 
+            if(opcode < 11) begin 
                 dispatcher <= {BD_READ, 4'b1_0_1_0}; 
             end else begin
                 dispatcher <= {BD_TWO, 4'b1_0_0_0}; 
