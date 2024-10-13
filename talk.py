@@ -77,9 +77,12 @@ class Codes(Enum):
     BOOT = 0x01
     RST = 0x02
     READ = 0x03
-    WRITE = 0x04
-    ADR_LOWER = 0x05
-    ADR_UPPER = 0x06
+    WRITE_ONE = 0x04
+    WRITE_TWO = 0x05
+    WRITE_THREE = 0x06
+    WRITE_FOUR = 0x07
+    ADR_LOWER = 0x08
+    ADR_UPPER = 0x09
 
     @property
     def raw_bytes(self):
@@ -194,7 +197,7 @@ def talk(link, data):
         # Define write function
         def write_action(byte, iota, count):
             # Send WRITE opcode and the data byte
-            send(Codes.WRITE.raw_bytes, MINOR_PAUSE)
+            send(Codes.WRITE_ONE.raw_bytes, MINOR_PAUSE)
             send(bytes([byte]), MAJOR_PAUSE)
 
             # If check is 'Write', perform read and verify

@@ -45,11 +45,14 @@ typedef enum logic [7:0] {
   BOP_READ,     //3
 
   // one arg
-  BOP_WRITE,    //4
+  BOP_WRITE_ONE,    //4
+  BOP_WRITE_TWO,    //5
+  BOP_WRITE_THREE,  //6
+  BOP_WRITE_FOUR,   //7
   
   // 2 args
-  BOP_ADR_LOWER,//5
-  BOP_ADR_UPPER //6
+  BOP_ADR_LOWER,//8
+  BOP_ADR_UPPER //9
 } bios_opcode_t;
 
 typedef struct packed {
@@ -190,7 +193,7 @@ always_ff @(posedge clk) begin
             else
                 one <= {ONE_START, 1'b0};
         ONE_ACT:
-            if(opcode == BOP_WRITE) begin
+            if(opcode == BOP_WRITE_ONE) begin
                 one <= {ONE_START, 1'b1};
             end
         default:
@@ -252,7 +255,7 @@ end
         BD_ONE:
         if (read_en) begin
             a <= i_data;
-            if(opcode == 4) begin 
+            if(opcode < 8) begin 
                 dispatcher <= {BD_READ, 4'b1_0_1_0}; 
             end else begin
                 dispatcher <= {BD_TWO, 4'b1_0_0_0}; 
