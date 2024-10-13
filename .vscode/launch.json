@@ -15,13 +15,13 @@
         "--major-pause", "0.0", 
         
         "--write", 
-        "--check", "Write", 
-        "--file", "tmp/main.bin", 
-        "--target-address", "0x00000000", 
+        "--check", "Off", 
+        "--file", "firmware/obj_dir/main.bin", 
+        "--start-address", "0x00000000", 
         
         "--boot", 
         
-        "--verbose", "Fatal,Error,Status"
+        "--log-level", "Fatal,Error,Status"
       ]
     }
   ]
