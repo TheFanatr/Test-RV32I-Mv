@@ -15,3 +15,4 @@ sim_build
 *.fst
 obj_dir
 *.bak
+__pycache__
