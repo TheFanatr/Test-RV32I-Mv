@@ -143,15 +143,15 @@ def talk(link, data):
             time.sleep(pause)
 
     # Initialize *_address_counter with START_ADDRESS
-    byte_address_counter = START_ADDRESS
-    quad_word_address_counter = 0x00000000_00 | START_ADDRESS
+    byte_address_counter = 0x00000000_00 | START_ADDRESS
+    quad_word_address_counter = START_ADDRESS
 
     # Define per_address function
     def address_per(enumerable, action, address_increment=1, reset_address=None):
         nonlocal byte_address_counter, quad_word_address_counter
         if reset_address is not None:
-            byte_address_counter = reset_address
-            quad_word_address_counter = 0x00000000_00 | reset_address
+            byte_address_counter = 0x00000000_00 | reset_address
+            quad_word_address_counter = reset_address
         previous_upper_address = -1  # For checking if upper address changed
         count = len(enumerable)
 
@@ -204,7 +204,7 @@ def talk(link, data):
         # Define write function
         def write_action(byte, iota, count):
             # Send WRITE opcode and the data byte
-            send(Codes(Codes.WRITE_ONE.value + (byte_address_counter & 0xFF)).raw_bytes, MINOR_PAUSE)
+            send(Codes(Codes.WRITE_ONE.value + (byte_address_counter & 0b11)).raw_bytes, MINOR_PAUSE)
             send(bytes([byte]), MAJOR_PAUSE)
 
             # If check is 'Write', perform read and verify
