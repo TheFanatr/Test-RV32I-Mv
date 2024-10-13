@@ -77,15 +77,18 @@ class Codes(Enum):
     BOOT = 0x01
     RST = 0x02
     
-    READ = 0x03
+    READ_ONE = 0x03
+    READ_TWO = 0x04
+    READ_THREE = 0x05
+    READ_FOUR = 0x06
     
-    WRITE_ONE = 0x04
-    WRITE_TWO = 0x05
-    WRITE_THREE = 0x06
-    WRITE_FOUR = 0x07
+    WRITE_ONE = 0x07
+    WRITE_TWO = 0x08
+    WRITE_THREE = 0x09
+    WRITE_FOUR = 0x0a
     
-    ADR_LOWER = 0x08
-    ADR_UPPER = 0x09
+    ADR_LOWER = 0x0b
+    ADR_UPPER = 0x0c
 
     @property
     def raw_bytes(self):
@@ -188,7 +191,7 @@ def talk(link, data):
 
         for _ in range(2): #FIXME - don't do update read
             # Send READ opcode
-            send(Codes.READ.raw_bytes)
+            send(Codes(Codes.WRITE_ONE.value + (byte_address_counter & 0b11)).raw_bytes)
 
             # Read one byte from the socket (blocking)
             received_byte = link.recv(1, socket.MSG_WAITALL)
