@@ -104,7 +104,7 @@ module bios #(
     input wire [DATA_WIDTH:0] i_read_data,
 
     output o_write_enable,
-    output [3:0] o_byte_enable,
+    output logic [3:0] o_byte_enable,
     output logic [ADDR_WIDTH:0] o_write_addr,
     output logic [DATA_WIDTH:0] o_write_data,
 
@@ -136,9 +136,6 @@ module bios #(
   logic [7:0] b;
 
   assign o_in_ready = dispatcher.o_in_ready;
-
-  //ram
-  assign o_byte_enable = 4'b0001;
 	
   assign o_booted = none.boot;
   assign o_rst = none.rst;
@@ -148,7 +145,6 @@ module bios #(
   assign o_write_enable = one.write_enable;
   assign o_write_addr = ram_addr;
   assign o_read_addr = ram_addr;
-  assign o_write_data = a;
 
 
 always_ff @(posedge clk) begin
@@ -193,9 +189,28 @@ always_ff @(posedge clk) begin
             else
                 one <= {ONE_START, 1'b0};
         ONE_ACT:
-            if(opcode == BOP_WRITE_ONE) begin
-                one <= {ONE_START, 1'b1};
+            case(opcode)
+            BOP_WRITE_ONE: begin
+                    o_byte_enable <= 4'b0001;
+                    o_write_data[7:0] <= a;
+                    one <= {ONE_START, 1'b1};
             end
+            BOP_WRITE_TWO: begin
+                    o_byte_enable <= 4'b0010;
+                     o_write_data[15:8] <= a;
+                    one <= {ONE_START, 1'b1};
+            end
+            BOP_WRITE_THREE: begin
+                    o_byte_enable <= 4'b0100;
+                     o_write_data[23:16] <= a;
+                    one <= {ONE_START, 1'b1};
+            end
+            BOP_WRITE_FOUR: begin
+                    o_byte_enable <= 4'b1000;
+                    o_write_data[31:24] <= a;
+                    one <= {ONE_START, 1'b1};
+            end
+            endcase
         default:
             one <= {ONE_START, 1'b0};
       endcase
