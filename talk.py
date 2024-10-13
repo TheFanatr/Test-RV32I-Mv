@@ -76,11 +76,14 @@ class Codes(Enum):
     NOP = 0x00
     BOOT = 0x01
     RST = 0x02
+    
     READ = 0x03
+    
     WRITE_ONE = 0x04
     WRITE_TWO = 0x05
     WRITE_THREE = 0x06
     WRITE_FOUR = 0x07
+    
     ADR_LOWER = 0x08
     ADR_UPPER = 0x09
 
@@ -139,21 +142,25 @@ def talk(link, data):
         if pause > 0:
             time.sleep(pause)
 
-    # Initialize address_counter with START_ADDRESS
-    address_counter = START_ADDRESS
+    # Initialize *_address_counter with START_ADDRESS
+    byte_address_counter = START_ADDRESS
+    quad_word_address_counter = 0x00000000_00 | START_ADDRESS
 
     # Define per_address function
     def address_per(enumerable, action, address_increment=1, reset_address=None):
-        nonlocal address_counter
+        nonlocal byte_address_counter, quad_word_address_counter
         if reset_address is not None:
-            address_counter = reset_address
+            byte_address_counter = reset_address
+            quad_word_address_counter = 0x00000000_00 | reset_address
         previous_upper_address = -1  # For checking if upper address changed
         count = len(enumerable)
 
         for iota, item in enumerate(enumerable):
             # Split the address into upper and lower 16 bits
-            upper_address = (address_counter >> 16) & 0xFFFF
-            lower_address = address_counter & 0xFFFF
+            quad_word_address_counter = (byte_address_counter >> 2)
+            
+            upper_address = (quad_word_address_counter >> 16) & 0xFFFF
+            lower_address = quad_word_address_counter & 0xFFFF
 
             report(Levels.Calculation, f"calculation: address_upper={hex(upper_address)} address_lower={hex(lower_address)}")
 
@@ -172,12 +179,12 @@ def talk(link, data):
             action(item, iota, count)
 
             # Increment the address counter
-            address_counter += address_increment
+            byte_address_counter += address_increment
 
             report(Levels.Progress)
 
     def check(expected_byte):
-        nonlocal address_counter
+        nonlocal byte_address_counter
 
         for _ in range(2): #FIXME - don't do update read
             # Send READ opcode
@@ -189,15 +196,15 @@ def talk(link, data):
             report(Levels.Wire, f"raw in: {received_byte.hex()}")
 
         if not received_byte:
-            report(Levels.Fatal, f"Error: Did not receive data when reading at address {hex(address_counter)}")
+            report(Levels.Fatal, f"Error: Did not receive data when reading at address {hex(byte_address_counter)}")
         elif received_byte[0] != expected_byte:
-            report(Levels.Fatal, f"Data mismatch at address {hex(address_counter)}: expected {expected_byte}, got {received_byte[0]}")
+            report(Levels.Fatal, f"Data mismatch at address {hex(byte_address_counter)}: expected {expected_byte}, got {received_byte[0]}")
 
     if WRITE:
         # Define write function
         def write_action(byte, iota, count):
             # Send WRITE opcode and the data byte
-            send(Codes.WRITE_ONE.raw_bytes, MINOR_PAUSE)
+            send(Codes(Codes.WRITE_ONE.value + (byte_address_counter & 0xFF)).raw_bytes, MINOR_PAUSE)
             send(bytes([byte]), MAJOR_PAUSE)
 
             # If check is 'Write', perform read and verify
