@@ -25,28 +25,24 @@ module core #(
 
 reg [31:0] pc;
 
-
-
-always_ff @(posedge clk) 
-    if(rst) begin
-        pc <= 0;
-    end
+wire [31:0] instruction;
 
 wire invalid_instruction;
 
-assign invalid_instruction = ~(|instruction);
+wire valid_decoder_output;
+
+assign invalid_instruction = ~(|instruction) & ~valid_decoder_output;
 
 always_ff @(posedge clk)
-    if (clk_en)
+    if(rst)
+        pc <= 0;
+    else if (clk_en)
         if(~invalid_instruction)
             pc <= pc + 1;
         else
             $finish();
 
-wire [31:0] instruction;
-
-fetch  #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) 
-    u_fetch(
+fetch #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) u_fetch(
     .clk(clk),
     .clk_en(clk_en),
     .rst(rst),
@@ -57,6 +53,16 @@ fetch  #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH))
     .i_read_fetch_data(i_read_fetch_data),
 
     .o_instruction(instruction)
+);
+
+decode u_decode(
+    .clk(clk),
+    .clk_en(clk_en),
+    .rst(rst),
+
+    .i_instruction(instruction),
+
+    .o_valid(valid_decoder_output)
 );
     
 endmodule
