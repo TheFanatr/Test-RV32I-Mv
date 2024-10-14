@@ -1,6 +1,6 @@
 # Implementation Details of the `talk.py` Python Script
 
-The script is designed to send a binary file over a TCP connection using a custom BIOS protocol. It includes features such as retries on connection failure, adjustable pauses between commands, verbose logging with multiple levels, and support for writing and verifying data.
+The `talk.py` script is designed to send a binary file over a TCP connection using a custom BIOS protocol. It includes features such as retries on connection failure, adjustable pauses between commands, verbose logging with multiple levels, and support for writing and verifying data.
 
 ## Table of Contents
 
@@ -12,14 +12,20 @@ The script is designed to send a binary file over a TCP connection using a custo
     - [Checks](#checks)
     - [Levels](#levels)
     - [Codes](#codes)
+      - [Read Opcodes](#read-opcodes)
+      - [Write Opcodes](#write-opcodes)
+      - [Address Opcodes](#address-opcodes)
   - [Global Constants](#global-constants)
   - [Verbose Logging Mechanism](#verbose-logging-mechanism)
   - [Main Functions](#main-functions)
     - [`start()` Function](#start-function)
     - [`talk()` Function](#talk-function)
-    - [`send()` Function](#send-function)
-    - [`address_per()` Function](#address_per-function)
-    - [`check()` Function](#check-function)
+      - [Address Initialization](#address-initialization)
+      - [`send()` Function](#send-function)
+      - [`address_per()` Function](#address_per-function)
+      - [Write and Check Operations](#write-and-check-operations)
+      - [Progress Reporting](#progress-reporting)
+      - [`check()` Function](#check-function)
   - [Intentional Workarounds](#intentional-workarounds)
   - [Usage Example](#usage-example)
   - [Conclusion](#conclusion)
@@ -28,7 +34,7 @@ The script is designed to send a binary file over a TCP connection using a custo
 
 ## Overview
 
-The `talk.py` script is a Python utility for sending binary files to a target device over TCP using a custom BIOS protocol. It handles connection retries, supports various operational modes (writing, checking, booting), and provides detailed logging capabilities. The script includes intentional workarounds for known BIOS bugs, marked with `#FIXME` comments, which should not be applied until the BIOS issues are resolved.
+The `talk.py` script is a Python utility for sending binary files to a target device over TCP using a custom BIOS protocol. It handles connection retries, supports various operational modes (writing, checking, booting), and provides detailed logging capabilities. The script now uses **quad-word addressing** (addresses are in terms of 32-bit words) and updated opcodes to align with the latest BIOS protocol specifications. It includes intentional workarounds for known BIOS bugs, marked with `#FIXME` comments, which should not be applied until the BIOS issues are resolved.
 
 ---
 
@@ -43,8 +49,8 @@ The script uses the `argparse` module to parse command-line arguments, allowing 
 - `-l`, `--major-pause`: Pause in seconds between commands (default: `0.0`).
 - `-w`, `--write`: Enable writing data (default: `True`).
 - `-c`, `--check`: Verification mode (`Write`, `On`, `Off`) (default: `Off`).
-- `-f`, `--file`: Binary file to send (default: `tmp/main.bin`).
-- `-a`, `--start-address`: Start address to perform BIOS RAM operations at (default: `0x00000000`).
+- `-f`, `--file`: Binary file to send (default: `firmware/obj_dir/main.bin`).
+- `-a`, `--start-address`: **Start address (addresses quad-words of RAM)** to perform BIOS RAM operations at (default: `0x0`).
 - `-b`, `--boot`: Enable boot command after operations (default: `True`).
 - `-o`, `--log-level`: Output mode with multiple levels (`Off`, `Fatal`, `Error`, `Status`, `Progress`, `Wire`, `Calculation`) (default: `Fatal,Error,Status`).
 
@@ -81,15 +87,35 @@ The `Levels` enum includes two properties:
 
 The `Codes` enum represents BIOS opcodes:
 
-- `NOP`: No operation.
-- `BOOT`: Boot command.
-- `RST`: Reset command.
-- `READ`: Read command.
-- `WRITE`: Write command.
-- `ADR_LOWER`: Set lower address bits.
-- `ADR_UPPER`: Set upper address bits.
+- `NOP` (`0x00`): No operation.
+- `BOOT` (`0x01`): Boot command.
+- `RST` (`0x02`): Reset command.
 
-Each opcode has a `raw_bytes` property to get its byte representation.
+#### Read Opcodes
+
+- `READ_ONE` (`0x03`): Read byte 0 of the current quad-word.
+- `READ_TWO` (`0x04`): Read byte 1 of the current quad-word.
+- `READ_THREE` (`0x05`): Read byte 2 of the current quad-word.
+- `READ_FOUR` (`0x06`): Read byte 3 of the current quad-word.
+
+#### Write Opcodes
+
+- `WRITE_ONE` (`0x07`): Write byte 0 of the current quad-word.
+- `WRITE_TWO` (`0x08`): Write byte 1 of the current quad-word.
+- `WRITE_THREE` (`0x09`): Write byte 2 of the current quad-word.
+- `WRITE_FOUR` (`0x0a`): Write byte 3 of the current quad-word.
+
+#### Address Opcodes
+
+- `ADR_LOWER` (`0x0b`): Set lower 16 bits of the address.
+- `ADR_UPPER` (`0x0c`): Set upper 16 bits of the address.
+
+Each opcode has:
+
+- `raw_bytes`: Returns the byte representation of the opcode.
+- `__bytes__`: Allows conversion to bytes using `bytes(Codes.OPCODE)`.
+- `__int__`: Allows conversion to integer using `int(Codes.OPCODE)`.
+- `__add__`: Enables arithmetic addition with other opcodes or integers, useful for calculating read/write opcodes with offsets.
 
 ---
 
@@ -104,8 +130,8 @@ The script defines several global constants with default values:
 - `MAJOR_PAUSE`: `0.0`
 - `WRITE`: `True`
 - `CHECK`: `Checks.Off`
-- `FILE`: `tmp/main.bin`
-- `START_ADDRESS`: `0x00000000`
+- `FILE`: `firmware/obj_dir/main.bin`
+- `START_QUAD_WORD_ADDRESS`: `0x00000000_00`
 - `BOOT`: `True`
 - `LEVEL`: `Levels.Fatal | Levels.Error | Levels.Status`
 
@@ -149,73 +175,74 @@ The `talk()` function manages communication with the target device over the esta
 
 Key points:
 
-- Defines the `send()` function for sending data over the socket with optional pauses.
-- Initializes `address_counter` with `START_ADDRESS`.
-- Implements the `address_per()` function for iterating over the data and performing actions at each address.
-- Manages writing data, verifying data, and sending the boot command based on the provided options.
+#### Address Initialization
 
-### `send()` Function
+  - `byte_address_counter`: Initialized by shifting the `START_QUAD_WORD_ADDRESS` left by 2 bits to convert quad-word address to byte address.
+    ```python
+    byte_address_counter = 0x00000000_00 | (START_QUAD_WORD_ADDRESS << 2)
+    ```
+  - `quad_word_address_counter`: Initialized with `START_QUAD_WORD_ADDRESS`.
+  - `per_quad_word_address_byte_number`: Tracks the byte offset within the current quad-word.
 
-The `send()` function sends raw bytes over the socket and logs the sent data if the `Wire` log level is enabled.
+#### `send()` Function
 
-```python
-def send(raw_data, pause=0):
-    link.sendall(raw_data)
-    report(Levels.Wire, f"Sent: {raw_data.hex()}")
+  - Sends raw data over the socket.
+  - Logs the sent data if `Wire` level is enabled.
+    ```python
+    def send(raw_data, pause=0):
+        link.sendall(raw_data)
+        report(Levels.Wire, f"raw: {raw_data.hex()}")
+        if pause > 0:
+            time.sleep(pause)
+    ```
 
-    if pause > 0:
-        time.sleep(pause)
-```
+#### `address_per()` Function
 
-### `address_per()` Function
+  - Iterates over the data, calculates addresses, and performs the specified action at each address.
+  - Updates `quad_word_address_counter` and `per_quad_word_address_byte_number` based on `byte_address_counter`.
+  - Sends `ADR_UPPER` and `ADR_LOWER` opcodes correctly.
+  - Logs calculations if `Calculation` level is enabled.
 
-The `address_per()` function iterates over the provided data, calculates addresses, and performs the specified action at each address.
+#### Write and Check Operations
 
-Key points:
+  - Uses adjusted opcodes (`WRITE_ONE` plus offset) to write to specific bytes within a quad-word.
+    ```python
+    send(bytes(Codes.WRITE_ONE + per_quad_word_address_byte_number), MINOR_PAUSE)
+    ```
+  - Reads data using adjusted opcodes (`READ_ONE` plus offset) during verification.
+    ```python
+    send(bytes(Codes.READ_ONE + per_quad_word_address_byte_number))
+    ```
 
-- Calculates upper and lower address bits.
-- Handles sending address opcodes and address data to the target device.
-- Calls the provided `action` function at each address.
-- Increments the `address_counter` accordingly.
-- Logs calculations if the `Calculation` log level is enabled.
+#### Progress Reporting
+  - Reports before sending data to accurately reflect the operation in progress.
 
-### `check()` Function
+#### `check()` Function
 
 The `check()` function reads a byte from the target device and compares it to the expected byte, handling any mismatches or errors.
 
 Key points:
 
-- Sends the `READ` opcode and reads the response.
-- Performs an intentional duplicate read to adjust for a known BIOS state machine bug (marked with `#FIXME` comments).
-- Logs received data if the `Wire` log level is enabled.
-- Exits the script with a fatal error if the read fails or the data does not match.
+- Sends the appropriate `READ` opcode based on the byte offset within the quad-word.
+- Performs an intentional duplicate read to accommodate a BIOS state machine bug.
+- Logs received data if `Wire` level is enabled.
+- Reports errors with detailed address and byte offset information.
 
 ---
 
 ## Intentional Workarounds
 
-The script contains intentional deviations from standard logic to work around known BIOS bugs. These are marked with `#FIXME` comments and should **not** be corrected until the BIOS issues are resolved.
+The script contains intentional deviations from standard logic to work around known BIOS bugs, marked with `#FIXME` comments.
 
 Key workarounds:
 
-1. **Opcode Swapping**: The `ADR_LOWER` and `ADR_UPPER` opcodes are intentionally swapped when sending addresses.
-   ```python
-   send(Codes.ADR_LOWER.raw_bytes, MINOR_PAUSE) #FIXME - Use ADR_UPPER
-   ```
-
-2. **Byte Order Adjustment**: The script uses `'little'` byte order instead of `'big'` when sending address data.
-   ```python
-   send(upper_address.to_bytes(2, byteorder='little'), MAJOR_PAUSE) #FIXME - Use byteorder='big'
-   ```
-
-3. **Duplicate Reads**: The `check()` function performs duplicate reads to accommodate a BIOS state machine bug.
-   ```python
-   for _ in range(2): #FIXME - don't do update read
-       send(Codes.READ.raw_bytes)
-       received_byte = link.recv(1, socket.MSG_WAITALL)
-   ```
-
-These workarounds are necessary for the script to function correctly with the current BIOS implementation and should remain until the BIOS is fixed.
+1. **Duplicate Reads in `check()` Function**:
+   - The function performs duplicate reads to adjust for a BIOS state machine bug.
+     ```python
+     for _ in range(2):  # FIXME - don't do update read
+         send(bytes(Codes.READ_ONE + per_quad_word_address_byte_number))
+         received_byte = link.recv(1, socket.MSG_WAITALL)
+     ```
 
 ---
 
@@ -233,7 +260,7 @@ python3.13 script_name.py \
   -w \
   -c Off \
   -f firmware/obj_dir/main.bin \
-  -a 0x00000000 \
+  -a 0x0 \
   -b \
   -o Fatal,Error,Status
 ```
@@ -246,6 +273,8 @@ The `talk.py` script is a robust utility for sending binary files to a target de
 
 Key takeaways:
 
+- **Quad-Word Addressing**: The script uses quad-word addressing to align with the BIOS protocol.
+- **Updated Opcodes**: Uses specific opcodes for reading and writing individual bytes within a quad-word.
 - **Flexible Command-Line Interface**: Allows users to customize behavior extensively.
 - **Verbose Logging**: Offers granular control over logging levels to aid in debugging and monitoring.
 - **Intentional Workarounds**: Contains necessary adjustments to function with the current BIOS, marked for future correction.
@@ -253,4 +282,4 @@ Key takeaways:
 
 ---
 
-**Note**: Developers should be aware of the `#FIXME` comments indicating where code changes will be required once the BIOS bugs are addressed. These intentional "errors" are crucial for the script's current operation and should not be modified until the underlying issues are resolved.
+**Note**: Developers should be aware of the `#FIXME` comments indicating where code changes will be required once the BIOS bugs are addressed. These intentional adjustments are crucial for the script's current operation and should not be modified until the underlying issues are resolved.

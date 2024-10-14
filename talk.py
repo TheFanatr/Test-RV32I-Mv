@@ -6,7 +6,6 @@ import functools
 from enum import Enum, Flag, auto
 
 #REVIEW - apply FIXME anchor for BIOS state machine bug
-#REVIEW - apply FIXME anchors for RAM addressing and data endianness bugs
 
 # Example command line ensuring all defaults:
 # python3.13 script_name.py \
@@ -66,7 +65,7 @@ MAJOR_PAUSE = 0.0
 WRITE = True
 CHECK = Checks.Off  # Default check mode
 FILE = 'firmware/obj_dir/main.bin'
-START_ADDRESS = 0x00000000  # Default start address
+START_QUAD_WORD_ADDRESS = 0x00000000_00  # Default start address
 
 BOOT = True
 
@@ -93,6 +92,15 @@ class Codes(Enum):
     @property
     def raw_bytes(self):
         return bytes([self.value])
+    
+    def __bytes__(self):
+        return self.raw_bytes
+    
+    def __int__(self):
+        return self.value
+    
+    def __add__(self, other):
+        return Codes(int(self) + int(other))
 
 def report(level: Levels, *args, **kwargs):
     if level in LEVEL:
@@ -140,21 +148,23 @@ def talk(link, data):
     # Define send function
     def send(raw_data, pause=0):
         link.sendall(raw_data)
-        report(Levels.Wire, f"Sent: {raw_data.hex()}")
+        report(Levels.Wire, f"raw: {raw_data.hex()}")
         
         if pause > 0:
             time.sleep(pause)
 
-    # Initialize *_address_counter with START_ADDRESS
-    byte_address_counter = 0x00000000_00 | START_ADDRESS
-    quad_word_address_counter = START_ADDRESS
+    # Initialize *_address_counter with START_QUAD_WORD_ADDRESS
+    byte_address_counter = 0x00000000_00 | (START_QUAD_WORD_ADDRESS << 2)
+    quad_word_address_counter = START_QUAD_WORD_ADDRESS
+    per_quad_word_address_byte_number = 00
 
     # Define per_address function
     def address_per(enumerable, action, address_increment=1, reset_address=None):
-        nonlocal byte_address_counter, quad_word_address_counter
+        nonlocal byte_address_counter, quad_word_address_counter, per_quad_word_address_byte_number
         if reset_address is not None:
-            byte_address_counter = 0x00000000_00 | reset_address
+            byte_address_counter = 0x00000000_00 | (reset_address << 2)
             quad_word_address_counter = reset_address
+            per_quad_word_address_byte_number = 00
         previous_upper_address = -1  # For checking if upper address changed
         count = len(enumerable)
 
@@ -162,10 +172,16 @@ def talk(link, data):
             # Split the address into upper and lower 16 bits
             quad_word_address_counter = (byte_address_counter >> 2)
             
+            report(Levels.Calculation, f"calculation: address={hex(quad_word_address_counter)}")
+            
             upper_address = (quad_word_address_counter >> 16) & 0xFFFF
             lower_address = quad_word_address_counter & 0xFFFF
 
             report(Levels.Calculation, f"calculation: address_upper={hex(upper_address)} address_lower={hex(lower_address)}")
+            
+            per_quad_word_address_byte_number = byte_address_counter & 0b11
+            
+            report(Levels.Calculation, f"calculation: per_quad_word_address_byte_number={hex(per_quad_word_address_byte_number)}")
 
             # Update upper address if it changed
             if upper_address != previous_upper_address:
@@ -187,11 +203,9 @@ def talk(link, data):
             report(Levels.Progress)
 
     def check(expected_byte):
-        nonlocal byte_address_counter
-
         for _ in range(2): #FIXME - don't do update read
             # Send READ opcode
-            send(Codes(Codes.READ_ONE.value + (byte_address_counter & 0b11)).raw_bytes)
+            send(bytes(Codes.READ_ONE + per_quad_word_address_byte_number))
 
             # Read one byte from the socket (blocking)
             received_byte = link.recv(1, socket.MSG_WAITALL)
@@ -199,25 +213,25 @@ def talk(link, data):
             report(Levels.Wire, f"raw in: {received_byte.hex()}")
 
         if not received_byte:
-            report(Levels.Fatal, f"Error: Did not receive data when reading at address {hex(byte_address_counter)}")
+            report(Levels.Fatal, f"Error: Did not receive data when reading at address {hex(quad_word_address_counter)} for byte {hex(per_quad_word_address_byte_number)}.")
         elif received_byte[0] != expected_byte:
-            report(Levels.Fatal, f"Data mismatch at address {hex(byte_address_counter)}: expected {expected_byte}, got {received_byte[0]}")
+            report(Levels.Fatal, f"Data mismatch at address {hex(quad_word_address_counter)} for byte {hex(per_quad_word_address_byte_number)}: expected {expected_byte}, got {received_byte[0]}")
 
     if WRITE:
         # Define write function
         def write_action(byte, iota, count):
+            # Progress reporting
+            if Levels.Progress in LEVEL:
+                status = 'Writing and Verifying' if CHECK == Checks.Write else 'Writing'
+                report(Levels.Progress, f"{status}: Byte {iota+1}/{count}")
+
             # Send WRITE opcode and the data byte
-            send(Codes(Codes.WRITE_ONE.value + (byte_address_counter & 0b11)).raw_bytes, MINOR_PAUSE)
+            send(bytes(Codes.WRITE_ONE + per_quad_word_address_byte_number), MINOR_PAUSE)
             send(bytes([byte]), MAJOR_PAUSE)
 
             # If check is 'Write', perform read and verify
             if CHECK == Checks.Write:
                 check(byte)
-
-            # Progress reporting
-            if Levels.Progress in LEVEL:
-                status = 'Writing and Verifying' if CHECK == Checks.Write else 'Writing'
-                report(Levels.Progress, f"{status}: Byte {iota+1}/{count}")
 
         # Write data
         address_per(enumerable=data, action=write_action)
@@ -227,21 +241,19 @@ def talk(link, data):
     if CHECK == Checks.On:
         # Define check function
         def check_action(expected_byte, iota, count):
+            # Progress reporting
+            report(Levels.Progress, f"Verifying: Byte {iota+1}/{count}")
             check(expected_byte)
 
-            # Progress reporting
-            if Levels.Progress in LEVEL:
-                report(Levels.Progress, f"Verifying: Byte {iota+1}/{count}")
-
         report(Levels.Status, "Starting data verification...")
-        address_per(enumerable=data, action=check_action, reset_address=START_ADDRESS)
+        address_per(enumerable=data, action=check_action, reset_address=START_QUAD_WORD_ADDRESS)
         report(Levels.Status, "\nData verification successful.")
 
     # Send BOOT opcode at the end if boot is True
     if BOOT:
         send(Codes.RST.raw_bytes, MAJOR_PAUSE)
         send(Codes.BOOT.raw_bytes, MAJOR_PAUSE)
-        report(Levels.Status, "Sent boot command.")
+        report(Levels.Status, "Sent reset and boot command.")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Send binary file over TCP using BIOS protocol.')
@@ -263,8 +275,8 @@ if __name__ == '__main__':
                         help=f'Verification mode: {", ".join(check.name for check in Checks)} (default: {CHECK.name})')
     parser.add_argument('-f', '--file', type=str, default=FILE,
                         help=f'Binary file to send (default: {FILE})')
-    parser.add_argument('-a', '--start-address', type=lambda value: int(value, 0), default=START_ADDRESS,
-                        help=f'Start address to perform BIOS RAM operations at (default: {hex(START_ADDRESS)})')
+    parser.add_argument('-a', '--start-address', type=lambda value: int(value, 0), default=START_QUAD_WORD_ADDRESS,
+                        help=f'Start address (addresses quad-words of RAM) to perform BIOS RAM operations at (default: {hex(START_QUAD_WORD_ADDRESS)})')
 
     parser.add_argument('-b', '--boot', action='store_true', default=BOOT,
                         help=f'Enable boot command after operations (default: {BOOT})')
@@ -283,7 +295,7 @@ if __name__ == '__main__':
     WRITE = args.write
     CHECK = args.check
     FILE = args.file
-    START_ADDRESS = args.start_address
+    START_QUAD_WORD_ADDRESS = args.start_address
 
     BOOT = args.boot
 
