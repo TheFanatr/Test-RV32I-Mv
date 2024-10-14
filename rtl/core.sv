@@ -129,6 +129,16 @@ module core #(
         regs_write_en = 1;
         regs_write_data = alu_out_data;
       end
+      7'b0110111: begin
+        o_read_req = 1;
+        regs_write_en = 1;
+        regs_write_data =  imm << 12;
+      end
+      7'b0010111: begin
+        o_read_req = 1;
+        regs_write_en = 1;
+        regs_write_data =  pc + (imm << 12);
+      end
       default: begin
         o_read_req = 0;
         regs_write_en = 0;
