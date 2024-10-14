@@ -2,6 +2,7 @@
 #include "verilated.h"
 #include "verilated_fst_c.h"
 #include "uartsim.h"
+#include <cstdio>
 Vrv32i *top;
 VerilatedContext *contextp;
 VerilatedFstC *tfp;
@@ -72,19 +73,12 @@ int main(int argc, char **argv) {
 
   tfp->open("run.fst");
   while (!contextp->gotFinish()) {
-  //for (int i = 0; i < 10; i++) {
-        contextp->timeInc(1);
-
-    	  top->clk = 1;
-				top->eval();
-        tfp->dump(contextp->time());
-
-        contextp->timeInc(1);
-				top->clk = 0;
-				top->eval();
-        tfp->dump(contextp->time());
-
+    	  top->clk = !top->clk;
         top->rx = (*uart)(top->tx);
+
+				top->eval();
+        tfp->dump(contextp->time());
+        contextp->timeInc(1);
   }
 
   tfp->close();
