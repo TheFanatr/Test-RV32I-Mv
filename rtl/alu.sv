@@ -24,7 +24,7 @@ always_comb begin
     7'b0110011: begin
       case (i_funct3)
         3'b000: begin // ADD or SUB
-          if (i_funct7[5])
+          if (i_funct7 == 7'h20)
             o_rd_data = i_rs1_data - i_rs2_data; // SUB
           else
             o_rd_data = i_rs1_data + i_rs2_data; // ADD
@@ -34,7 +34,7 @@ always_comb begin
         3'b011: o_rd_data = (i_rs1_data < i_rs2_data) ? 1 : 0; // SLTU
         3'b100: o_rd_data = i_rs1_data ^ i_rs2_data; // XOR
         3'b101: begin // SRL or SRA
-          if (i_funct7[5])
+          if (i_funct7 == 7'h20)
             o_rd_data = $signed(i_rs1_data) >>> i_rs2_data[4:0]; // SRA
           else
             o_rd_data = i_rs1_data >> i_rs2_data[4:0]; // SRL

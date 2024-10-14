@@ -71,7 +71,7 @@ module decode (
           o_funct3 = i_instruction[14:12];
           o_rd = i_instruction[11:7];
           // _20_[11:0]
-          o_imm = {20'b0, i_instruction[31:20]};
+          o_imm = {{20{i_instruction[31]}}, i_instruction[31:20]};
           
           o_funct7 = 8'b0;
           o_rs2 = 5'b0;
@@ -81,7 +81,7 @@ module decode (
           o_rs1 = i_instruction[19:15];
           o_funct3 = i_instruction[14:12];
           // _20_[11:5][4:0]
-          o_imm = {20'b0, i_instruction[31:25], i_instruction[11:7]};
+          o_imm = {{20{i_instruction[31]}}, i_instruction[31:25], i_instruction[11:7]};
           
           o_funct7 = 8'b0;
           o_rd = 5'b0;
@@ -91,7 +91,7 @@ module decode (
           o_rs1 = i_instruction[19:15];
           o_funct3 = i_instruction[14:12];
           // _19_[12][11][10:5][4:1]_1_
-          o_imm = {19'b0, i_instruction[31], i_instruction[7], i_instruction[30:25], i_instruction[11:8], 1'b0};
+          o_imm = {{19{i_instruction[31]}}, i_instruction[31], i_instruction[7], i_instruction[30:25], i_instruction[11:8], 1'b0};
 
           o_funct7 = 8'b0;
           o_rd = 5'b0;
@@ -109,7 +109,7 @@ module decode (
         J: begin
           o_rd = i_instruction[11:7];
           // _11_[20][19:12][11][10:1]_1_
-          o_imm = {11'b0, i_instruction[31], i_instruction[19:12], i_instruction[20], i_instruction[30:21], 1'b0};
+          o_imm = {{11{i_instruction[31]}}, i_instruction[31], i_instruction[19:12], i_instruction[20], i_instruction[30:21], 1'b0};
 
           o_funct7 = 8'b0;
           o_funct3 = 3'b0;
