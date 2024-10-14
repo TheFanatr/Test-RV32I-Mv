@@ -11,12 +11,12 @@ module ram #(
     //Read
     input i_read_req,
     input [ADDR_WIDTH:0] i_read_addr,
-    output logic [DATA_WIDTH:0] o_read_data,
+    output [DATA_WIDTH:0] o_read_data,
 
 
     //Read fetch
     input [ADDR_WIDTH:0] i_read_fetch_addr,
-    output logic [DATA_WIDTH:0] o_read_fetch_data,
+    output [DATA_WIDTH:0] o_read_fetch_data,
 
     // Write
     input i_write_enable,
@@ -27,16 +27,16 @@ module ram #(
 
 `ifdef TESTING1
     always @(posedge clk) begin
-    $display("clk: ", clk);
-    $display("clk_en: ", clk_en);
-    $display("rst: ", rst);
-    $display("i_read_req: ", i_read_req);
-    $display("i_read_addr: ", i_read_addr);
-    $display("o_read_data: ", o_read_data);
-    $display("i_write_enable: ", i_write_enable);
-    $display("i_byte_enable: ", i_byte_enable);
-    $display("i_write_addr: ", i_write_addr);
-    $display("i_write_data: ", i_write_data);
+        $display("clk: ", clk);
+        $display("clk_en: ", clk_en);
+        $display("rst: ", rst);
+        $display("i_read_req: ", i_read_req);
+        $display("i_read_addr: ", i_read_addr);
+        $display("o_read_data: ", o_read_data);
+        $display("i_write_enable: ", i_write_enable);
+        $display("i_byte_enable: ", i_byte_enable);
+        $display("i_write_addr: ", i_write_addr);
+        $display("i_write_data: ", i_write_data);
     end
 `endif
 
@@ -62,18 +62,8 @@ always_ff @(posedge clk) begin
     end
 end
 
+assign o_read_data = ~i_read_req ? 32'b0 : {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
 
-
-always_ff @(posedge clk) begin
-    if (clk_en)
-        if (i_read_req) begin
-            o_read_data <= {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
-        end 
-end
-
-always_ff @(posedge clk) begin
-    if (clk_en)
-            o_read_fetch_data <= {mem_d[i_read_fetch_addr], mem_c[i_read_fetch_addr], mem_b[i_read_fetch_addr], mem_a[i_read_fetch_addr]};
-end
+assign o_read_fetch_data = {mem_d[i_read_fetch_addr], mem_c[i_read_fetch_addr], mem_b[i_read_fetch_addr], mem_a[i_read_fetch_addr]};
 
 endmodule

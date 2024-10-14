@@ -14,7 +14,7 @@ module regs (
     input [4:0] i_b_addr,
     output [31:0] o_b_data
 );
- reg [31:0] registers[32];
+  reg [31:0] registers[32];
 
   always_ff @(posedge clk) begin
     if(rst) begin
