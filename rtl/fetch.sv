@@ -14,12 +14,11 @@ module fetch #(
     output [ADDR_WIDTH:0] o_read_fetch_addr,
     input  [DATA_WIDTH:0] i_read_fetch_data,
 
-    output logic [31:0] o_instruction
+    output [31:0] o_instruction
 );
 
     assign o_read_fetch_addr = i_pc;
 
-    always_ff @(posedge clk)
-        o_instruction <= i_read_fetch_data;
+    assign o_instruction = i_read_fetch_data;
 
 endmodule
