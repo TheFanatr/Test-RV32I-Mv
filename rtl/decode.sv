@@ -1,14 +1,6 @@
 `timescale 1ns/1ps
 
-typedef enum bit [2:0] {
-  ERROR,
-  R,
-  I,
-  S,
-  B,
-  U,
-  J
-} inst_type_e;
+`include "types.svh"
 
 module decode (
   input clk,
