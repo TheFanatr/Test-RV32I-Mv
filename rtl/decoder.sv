@@ -10,7 +10,7 @@ typedef enum bit [2:0] {
   J
 } inst_type_e;
 
-module decode (
+module decoder (
   input clk,
   input clk_en,
   input rst,
