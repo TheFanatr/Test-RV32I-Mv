@@ -55,7 +55,7 @@ fetch #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) u_fetch(
     .o_instruction(instruction)
 );
 
-decoder u_decoder (
+decode u_decode (
     .clk(clk),
     .clk_en(clk_en),
     .rst(rst),
