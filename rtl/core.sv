@@ -31,7 +31,7 @@ wire invalid_instruction;
 
 wire valid_decoder_output;
 
-assign invalid_instruction = ~(|instruction) & ~valid_decoder_output;
+assign invalid_instruction = ~(|instruction) | ~valid_decoder_output;
 
 always_ff @(posedge clk)
     if(rst)

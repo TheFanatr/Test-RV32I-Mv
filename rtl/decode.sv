@@ -16,32 +16,21 @@ module decode (
   input rst,
 
   input [31:0] i_instruction,
-
   
-  output logic [6:0] o_opcode,
-  output logic [7:0] o_funct7,
-  output logic [2:0] o_funct3,
-  output logic [4:0] o_rs1,
-  output logic [4:0] o_rs2,
-  output logic [4:0] o_rd,
-  output logic [31:0] o_imm,
+  output bit [6:0] o_opcode,
+  output bit [7:0] o_funct7,
+  output bit [2:0] o_funct3,
+  output bit [4:0] o_rs1,
+  output bit [4:0] o_rs2,
+  output bit [4:0] o_rd,
+  output bit [31:0] o_imm,
 
-  output logic o_valid
+  output bit o_valid
 );
-
-  bit [6:0] opcode;
-  bit [7:0] funct7;
-  bit [2:0] funct3;
-  bit [4:0] rs1;
-  bit [4:0] rs2;
-  bit [4:0] rd;
-  bit [31:0] imm;
 
   inst_type_e inst_type;
 
-  wire valid = (|inst_type);
-
-  wire no_output = rst | ~valid;
+  wire no_output = rst | ~o_valid;
 
   //xxxxx11 = not compressed
 
@@ -59,99 +48,85 @@ module decode (
       7'b1110011: inst_type = I;
       default: inst_type = ERROR;
     endcase
+
+    o_valid = (|inst_type);
   end
 
   always_comb begin
     if (no_output) begin
-      funct7 = 0;
-      funct3 = 0;
-      rs1 = 0;
-      rs2 = 0;
-      rd = 0;
-      imm = 0;
-      opcode = 0;
+      o_funct7 = 0;
+      o_funct3 = 0;
+      o_rs1 = 0;
+      o_rs2 = 0;
+      o_rd = 0;
+      o_imm = 0;
+      o_opcode = 0;
     end else begin
-      opcode = i_instruction[6:0];
+      o_opcode = i_instruction[6:0];
 
       unique case (inst_type)
         R: begin
-          funct7 = i_instruction[31:25];
-          rs2 = i_instruction[24:20];
-          rs1 = i_instruction[19:15];
-          funct3 = i_instruction[14:12];
-          rd = i_instruction[11:7];
+          o_funct7 = i_instruction[31:25];
+          o_rs2 = i_instruction[24:20];
+          o_rs1 = i_instruction[19:15];
+          o_funct3 = i_instruction[14:12];
+          o_rd = i_instruction[11:7];
 
-          imm = 0;
+          o_imm = 0;
         end
         I: begin
-          imm[11:0] = i_instruction[31:20];
-          rs1 = i_instruction[19:15];
-          funct3 = i_instruction[14:12];
-          rd = i_instruction[11:7];
+          o_imm[11:0] = i_instruction[31:20];
+          o_rs1 = i_instruction[19:15];
+          o_funct3 = i_instruction[14:12];
+          o_rd = i_instruction[11:7];
           
-          funct7 = 0;
-          rs2 = 0;
+          o_funct7 = 0;
+          o_rs2 = 0;
         end
         S: begin
-          imm[11:5] = i_instruction[31:25];
-          rs2 = i_instruction[24:20];
-          rs1 = i_instruction[19:15];
-          funct3 = i_instruction[14:12];
-          imm[4:0] = i_instruction[11:7];
+          o_imm[11:5] = i_instruction[31:25];
+          o_rs2 = i_instruction[24:20];
+          o_rs1 = i_instruction[19:15];
+          o_funct3 = i_instruction[14:12];
+          o_imm[4:0] = i_instruction[11:7];
           
-          funct7 = 0;
-          rd = 0;
+          o_funct7 = 0;
+          o_rd = 0;
         end
         B: begin
-          imm[12] = i_instruction[31];
-          imm[10:5] = i_instruction[30:25];
-          rs2 = i_instruction[24:20];
-          rs1 = i_instruction[19:15];
-          funct3 = i_instruction[14:12];
-          imm[4:1] = i_instruction[11:8];
-          imm[11] = i_instruction[7];
+          o_imm[12] = i_instruction[31];
+          o_imm[10:5] = i_instruction[30:25];
+          o_rs2 = i_instruction[24:20];
+          o_rs1 = i_instruction[19:15];
+          o_funct3 = i_instruction[14:12];
+          o_imm[4:1] = i_instruction[11:8];
+          o_imm[11] = i_instruction[7];
 
-          funct7 = 0;
-          rd = 0;
+          o_funct7 = 0;
+          o_rd = 0;
         end
         U: begin
-          imm[31:12] = i_instruction[31:12];
-          rd = i_instruction[11:7];
+          o_imm[31:12] = i_instruction[31:12];
+          o_rd = i_instruction[11:7];
 
-          funct7 = 0;
-          funct3 = 0;
-          rs1 = 0;
-          rs2 = 0;
+          o_funct7 = 0;
+          o_funct3 = 0;
+          o_rs1 = 0;
+          o_rs2 = 0;
         end
         J: begin
-          imm[20] = i_instruction[31];
-          imm[10:1] = i_instruction[30:21];
-          imm[11] = i_instruction[20];
-          imm[19:12] = i_instruction[19:12];
-          rd = i_instruction[11:7];
+          o_imm[20] = i_instruction[31];
+          o_imm[10:1] = i_instruction[30:21];
+          o_imm[11] = i_instruction[20];
+          o_imm[19:12] = i_instruction[19:12];
+          o_rd = i_instruction[11:7];
 
-          funct7 = 0;
-          funct3 = 0;
-          rs1 = 0;
-          rs2 = 0;
+          o_funct7 = 0;
+          o_funct3 = 0;
+          o_rs1 = 0;
+          o_rs2 = 0;
         end
       endcase
-    end
-  end
-
-  always_ff @(posedge clk) begin
-    if (clk_en) begin
-      o_valid <= valid;
-      
-      o_funct7 <= funct7;
-      o_funct3 <= funct3;
-      o_rs1 <= rs1;
-      o_rs2 <= rs2;
-      o_rd <= rd;
-      o_imm <= imm;
-      o_opcode <= opcode;
-
-      $display("Instruction Type: %0h", inst_type);
     end
   end
 
