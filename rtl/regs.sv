@@ -24,8 +24,8 @@ module regs (
       end
     end
 
- always_ff @(posedge i_clk) begin
-    if (i_write_en) begin  
+ always_ff @(posedge clk) begin
+    if (i_write_en & clk_en) begin  
       registers[i_write_addr] <= i_write_data;
     end
   end
