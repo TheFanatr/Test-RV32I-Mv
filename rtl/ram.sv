@@ -62,7 +62,7 @@ always_ff @(posedge clk) begin
     end
 end
 
-assign o_read_data = ~i_read_req ? 32'b0 : {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
+assign o_read_data = {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
 
 assign o_read_fetch_data = {mem_d[i_read_fetch_addr], mem_c[i_read_fetch_addr], mem_b[i_read_fetch_addr], mem_a[i_read_fetch_addr]};
 
