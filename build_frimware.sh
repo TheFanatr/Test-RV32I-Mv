@@ -6,3 +6,7 @@ riscv64-unknown-elf-objcopy -O binary ./firmware/obj_dir/main.o ./firmware/obj_d
 riscv64-unknown-elf-as ./firmware/test.s -march=rv32i -o ./firmware/obj_dir/test.o -fPIC
 riscv64-unknown-elf-objcopy -O verilog ./firmware/obj_dir/test.o ./firmware/obj_dir/test.hex
 riscv64-unknown-elf-objcopy -O binary ./firmware/obj_dir/test.o ./firmware/obj_dir/test.bin
+
+riscv64-unknown-elf-as ./firmware/all.s -march=rv32i -o ./firmware/obj_dir/all.o -fPIC
+riscv64-unknown-elf-objcopy -O verilog ./firmware/obj_dir/all.o ./firmware/obj_dir/all.hex
+riscv64-unknown-elf-objcopy -O binary ./firmware/obj_dir/all.o ./firmware/obj_dir/all.bin

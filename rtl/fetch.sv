@@ -3,7 +3,7 @@
 module fetch #(
     ADDR_WIDTH = 31,
     DATA_WIDTH = 31
-)(
+) (
     input clk,
     input clk_en,
     input rst,
@@ -20,5 +20,6 @@ module fetch #(
     assign o_read_fetch_addr = i_pc;
 
     always_ff @(posedge clk)
-            o_instruction <= i_read_fetch_data;
+        o_instruction <= i_read_fetch_data;
+
 endmodule
