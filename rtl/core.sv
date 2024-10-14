@@ -20,7 +20,9 @@ module core #(
     output bit o_write_enable,
     output bit [3:0] o_byte_enable,
     output [ADDR_WIDTH:0] o_write_addr,
-    output bit [DATA_WIDTH:0] o_write_data
+    output bit [DATA_WIDTH:0] o_write_data,
+
+    output logic o_ebreak
 );
 
   reg [31:0] pc;
@@ -30,6 +32,14 @@ module core #(
   wire valid_decoder_output;
 
   wire invalid_instruction = ~(|instruction) | ~valid_decoder_output;
+
+  always_ff @(posedge clk)
+    case(opcode)
+      7'b1110011:
+        o_ebreak <= 1;
+      default:
+        o_ebreak <= 0;
+    endcase
 
   always_ff @(posedge clk)
     if (rst) pc <= 0;

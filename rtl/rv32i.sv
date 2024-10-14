@@ -43,6 +43,8 @@ module rv32i (
   wire [31:0] write_addr;
   wire [31:0] write_data;
 
+  wire ebreak;
+
   // RAM <-> BIOS
   wire rb_read_req;
   wire [31:0] rb_read_addr;
@@ -140,13 +142,17 @@ module rv32i (
     .o_write_enable(rc_write_enable),
     .o_byte_enable(rc_byte_enable),
     .o_write_addr(rc_write_addr),
-    .o_write_data(rc_write_data)
+    .o_write_data(rc_write_data),
+
+    .o_ebreak(ebreak)
   );
 
   bios u_bios(
   .clk(clk),
   .clk_en(clk_en),
   .rst(rst),
+
+  .i_ebreak(ebreak),
 
   .o_rst(bios_rst),
   .o_booted(booted),
