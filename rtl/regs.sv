@@ -14,17 +14,15 @@ module regs (
     input [4:0] i_b_addr,
     output [31:0] o_b_data
 );
- reg [31:0] registers[31];
+ reg [31:0] registers[32];
 
-  always_ff @(posedge clk)
+  always_ff @(posedge clk) begin
     if(rst) begin
       integer i;
       for (i = 0; i < 32; i = i + 1) begin
-        registers[i] = 0;
+        registers[i] = 32'd0;
       end
     end
-
- always_ff @(posedge clk) begin
     if (i_write_en & clk_en) begin  
       registers[i_write_addr] <= i_write_data;
     end
