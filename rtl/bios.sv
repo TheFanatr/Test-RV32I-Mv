@@ -95,7 +95,7 @@ module bios #(
 
     output o_write_enable,
     output logic [3:0] o_byte_enable,
-    output logic [ADDR_WIDTH:0] o_write_addr,
+    output wire [ADDR_WIDTH:0] o_write_addr,
     output logic [DATA_WIDTH:0] o_write_data,
 
     /*
