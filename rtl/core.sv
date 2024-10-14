@@ -108,11 +108,16 @@ module core #(
           3'b010: regs_write_data = i_read_data;
           3'b100: regs_write_data = {24'd0, i_read_data[7:0]};
           3'b101: regs_write_data = {16'd0, i_read_data[15:0]};
-          default: regs_write_data = 32'd0;
+          default: begin
+					regs_write_en = 0;
+					regs_write_data = 32'd0;
+				end
         endcase
-
-        regs_write_en = 1;
       end
+		default: begin
+			regs_write_en = 0;
+			regs_write_data = 32'd0;
+		end
     endcase
   end
   assign o_read_addr = rs1 + imm;
