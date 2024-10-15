@@ -78,7 +78,7 @@ module core #(
 
     unique case (jump_mode)
       JM_NEXT: pc_jump = 32'b1;
-      JM_RELATIVE: pc_jump = (imm >> 2);
+      JM_RELATIVE: pc_jump = ($signed(imm) >> 2);
       JM_ABSOLUTE: pc_jump = regs_a_data + (imm >> 2);
     endcase
   end
@@ -185,12 +185,12 @@ module core #(
       7'b1101111: begin // JAL
         o_read_req = 1;
         regs_write_en = 1;
-        regs_write_data = (pc << 2) + 4;
+        regs_write_data = (pc << 2);
       end
       7'b1100111: begin // JALR
         o_read_req = 1;
         regs_write_en = 1;
-        regs_write_data = (pc << 2) + 4;
+        regs_write_data = (pc << 2);
       end
       default: begin
         o_read_req = 0;

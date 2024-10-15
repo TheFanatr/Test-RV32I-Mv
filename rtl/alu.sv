@@ -35,7 +35,7 @@ always_comb begin
         3'b100: o_rd_data = i_rs1_data ^ i_rs2_data; // XOR
         3'b101: begin // SRL or SRA
           if (i_funct7 == 7'h20)
-            o_rd_data = $signed(i_rs1_data) >>> i_rs2_data[4:0]; // SRA
+            o_rd_data = $signed(i_rs1_data) >> i_rs2_data[4:0]; // SRA
           else
             o_rd_data = i_rs1_data >> i_rs2_data[4:0]; // SRL
         end
@@ -56,7 +56,7 @@ always_comb begin
         3'b001: o_rd_data = i_rs1_data << i_imm[4:0]; // SLLI
         3'b101: begin // SRLI or SRAI
           if (i_imm[11:5] == 6'h20)
-            o_rd_data = $signed(i_rs1_data) >>> i_imm[4:0]; // SRAI
+            o_rd_data = $signed(i_rs1_data) >> i_imm[4:0]; // SRAI
           else
             o_rd_data = i_rs1_data >> i_imm[4:0]; // SRLI
         end
