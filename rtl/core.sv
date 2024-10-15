@@ -1,5 +1,7 @@
 `timescale 1ns / 1ps
 
+`include "types.svh"
+
 module core #(
     ADDR_WIDTH = 31,
     DATA_WIDTH = 31
@@ -31,14 +33,6 @@ module core #(
 
   wire valid_decoder_output;
 
-  always_ff @(posedge clk)
-    case(opcode)
-      7'b1110011:
-        o_ebreak <= 1;
-      default:
-        o_ebreak <= 0;
-    endcase
-
   wire  [ 6:0] opcode;
   wire  [ 7:0] funct7;
   wire  [ 2:0] funct3;
@@ -49,7 +43,7 @@ module core #(
 
   logic [ 4:0] regs_write_addr;
   logic [DATA_WIDTH:0] regs_write_data;
-  logic        regs_write_en;
+  logic regs_write_en;
 
 
   wire  [ 4:0] regs_a_addr;
@@ -60,46 +54,52 @@ module core #(
 
   wire [DATA_WIDTH:0] alu_out_data;
 
-  bit [31:0] pc_offset;
-  bit use_custom_pc_offset;
+  bit [31:0] pc_jump;
+  jump_mode_e jump_mode;
 
   wire invalid_instruction = ~(|instruction) | ~valid_decoder_output;
 
   always_comb begin
-    if (opcode == 7'b1100011)
-      unique case (funct3)
-        3'h0:
-          if (regs_a_data == regs_b_data) use_custom_pc_offset = 1;
-          else use_custom_pc_offset = 0;
-        3'h1:
-          if (regs_a_data != regs_b_data) use_custom_pc_offset = 1; 
-          else use_custom_pc_offset = 0;
-        3'h4:
-          if (regs_a_data < regs_b_data) use_custom_pc_offset = 1; 
-          else use_custom_pc_offset = 0;
-        3'h5:
-          if (regs_a_data >= regs_b_data) use_custom_pc_offset = 1; 
-          else use_custom_pc_offset = 0;
-        3'h6:
-          if (regs_a_data < regs_b_data) use_custom_pc_offset = 1; 
-          else use_custom_pc_offset = 0;
-        3'h7:
-          if (regs_a_data >= regs_b_data) use_custom_pc_offset = 1; 
-          else use_custom_pc_offset = 0;
-        default: use_custom_pc_offset = 0;
+    case (opcode)
+      7'b1100011: unique case (funct3)
+        3'h0: jump_mode = regs_a_data == regs_b_data ? JM_RELATIVE : JM_NEXT; // BEQ
+        3'h1: jump_mode = regs_a_data != regs_b_data ? JM_RELATIVE : JM_NEXT; // BNE
+        3'h4: jump_mode = $signed(regs_a_data) < $signed(regs_b_data) ? JM_RELATIVE : JM_NEXT; // BLT
+        3'h5: jump_mode = $signed(regs_a_data) >= $signed(regs_b_data) ? JM_RELATIVE : JM_NEXT; // BGE
+        3'h6: jump_mode = regs_a_data < regs_b_data ? JM_RELATIVE : JM_NEXT; // BLTU
+        3'h7: jump_mode = regs_a_data >= regs_b_data ? JM_RELATIVE : JM_NEXT; // BGEU
+        
+        default: jump_mode = JM_NEXT;
       endcase
-    else use_custom_pc_offset = 0;
-      
-    if (use_custom_pc_offset) pc_offset = imm >> 2;
-    else pc_offset = 32'b1;
+      7'b1101111: jump_mode = JM_RELATIVE; // JAL
+      7'b1100111: jump_mode = JM_ABSOLUTE; // JALR
+      default: jump_mode = JM_NEXT;
+    endcase
+
+    unique case (jump_mode)
+      JM_NEXT: pc_jump = 32'b1;
+      JM_RELATIVE: pc_jump = (imm >> 2);
+      JM_ABSOLUTE: pc_jump = regs_a_data + (imm >> 2);
+    endcase
   end
 
   always_ff @(posedge clk)
     if (rst) pc <= 0;
     else if (clk_en)
       if (~invalid_instruction)
-        pc <= pc + pc_offset;
+        if (jump_mode == JM_ABSOLUTE)
+          pc <= pc_jump;
+        else 
+          pc <= pc + pc_jump;
       else $finish();
+
+  always_ff @(posedge clk)
+    case(opcode)
+      7'b1110011:
+        o_ebreak <= 1;
+      default:
+        o_ebreak <= 0;
+    endcase
 
   //STORE
   //TODO: move into module
@@ -134,53 +134,63 @@ module core #(
     end
   end
 
-  assign regs_a_addr  = rs1;
+  assign regs_a_addr = rs1;
   assign o_write_addr = regs_a_data + imm;
 
-  assign regs_b_addr  = rs2;
-  assign o_read_addr = regs_a_data + imm;
+  assign regs_b_addr = rs2;
+  assign o_read_addr= regs_a_data + imm;
   
   assign regs_write_addr  = rd;
 
   //LOAD
   always_comb begin
     case (opcode)
-      7'b0000011: begin
+      7'b0000011: begin // Load
         o_read_req = 1;
         regs_write_en = 1;
 
         case (funct3)
-          3'b000:
-          regs_write_data = {{24{i_read_data[7]}}, i_read_data[7:0]};  // Sign-extend byte to 32 bits
-          3'b001: regs_write_data = {{16{i_read_data[15]}}, i_read_data[15:0]};
-          3'b010: regs_write_data = i_read_data;
-          3'b100: regs_write_data = {24'd0, i_read_data[7:0]};
-          3'b101: regs_write_data = {16'd0, i_read_data[15:0]};
+          // Sign-extend byte to 32 bits 
+          3'b000: regs_write_data = {{24{i_read_data[7]}}, i_read_data[7:0]}; // LB
+          3'b001: regs_write_data = {{16{i_read_data[15]}}, i_read_data[15:0]}; // LH
+          3'b010: regs_write_data = i_read_data; // LW
+          3'b100: regs_write_data = {24'd0, i_read_data[7:0]}; // LBU
+          3'b101: regs_write_data = {16'd0, i_read_data[15:0]}; // LHU
           default: begin
             regs_write_en = 0;
             regs_write_data = 32'd0;
           end
         endcase
       end
-      7'b0110011: begin
+      7'b0110011: begin // from ALU
         o_read_req = 1;
         regs_write_en = 1;
         regs_write_data = alu_out_data;
         end
-      7'b0010011: begin
+      7'b0010011: begin // from ALU i
         o_read_req = 1;
         regs_write_en = 1;
         regs_write_data = alu_out_data;
       end
-      7'b0110111: begin
+      7'b0110111: begin // LUI
         o_read_req = 1;
         regs_write_en = 1;
-        regs_write_data =  imm << 12;
+        regs_write_data = imm;
       end
-      7'b0010111: begin
+      7'b0010111: begin // AUIPC
         o_read_req = 1;
         regs_write_en = 1;
-        regs_write_data =  pc + (imm << 12);
+        regs_write_data = (pc << 2) + imm;
+      end
+      7'b1101111: begin // JAL
+        o_read_req = 1;
+        regs_write_en = 1;
+        regs_write_data = (pc << 2) + 4;
+      end
+      7'b1100111: begin // JALR
+        o_read_req = 1;
+        regs_write_en = 1;
+        regs_write_data = (pc << 2) + 4;
       end
       default: begin
         o_read_req = 0;
