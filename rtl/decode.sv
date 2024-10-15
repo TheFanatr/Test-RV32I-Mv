@@ -91,7 +91,7 @@ module decode (
           o_rs1 = i_instruction[19:15];
           o_funct3 = i_instruction[14:12];
           // _19_[12][11][10:5][4:1]_1_
-          o_imm = {{19{i_instruction[31]}}, i_instruction[31], i_instruction[7], i_instruction[30:25], i_instruction[11:8], 1'b0};
+          o_imm = {o_funct3 == 3'h6 || o_funct3 == 3'h7 ? 19'b0 : {19{i_instruction[31]}}, i_instruction[31], i_instruction[7], i_instruction[30:25], i_instruction[11:8], 1'b0};
 
           o_funct7 = 8'b0;
           o_rd = 5'b0;

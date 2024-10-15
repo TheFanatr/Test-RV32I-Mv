@@ -41,10 +41,10 @@ module ram #(
 `endif
 
 //2**ADDR_WIDTH - 1 
-(* ram_style = "block" *) logic [7:0] mem_a [32-1:0];
-(* ram_style = "block" *) logic [7:0] mem_b [32-1:0];
-(* ram_style = "block" *) logic [7:0] mem_c [32-1:0];
-(* ram_style = "block" *) logic [7:0] mem_d [32-1:0];
+(* ram_style = "block" *) logic [7:0] mem_a [1024-1:0];
+(* ram_style = "block" *) logic [7:0] mem_b [1024-1:0];
+(* ram_style = "block" *) logic [7:0] mem_c [1024-1:0];
+(* ram_style = "block" *) logic [7:0] mem_d [1024-1:0];
 
 
 always_ff @(posedge clk) begin

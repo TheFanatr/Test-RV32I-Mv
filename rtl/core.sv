@@ -31,8 +31,6 @@ module core #(
 
   wire valid_decoder_output;
 
-  wire invalid_instruction = ~(|instruction) | ~valid_decoder_output;
-
   always_ff @(posedge clk)
     case(opcode)
       7'b1110011:
@@ -40,12 +38,6 @@ module core #(
       default:
         o_ebreak <= 0;
     endcase
-
-  always_ff @(posedge clk)
-    if (rst) pc <= 0;
-    else if (clk_en)
-      if (~invalid_instruction) pc <= pc + 1;
-      else $finish();
 
   wire  [ 6:0] opcode;
   wire  [ 7:0] funct7;
@@ -67,6 +59,47 @@ module core #(
   wire  [DATA_WIDTH:0] regs_b_data;
 
   wire [DATA_WIDTH:0] alu_out_data;
+
+  bit [31:0] pc_offset;
+  bit use_custom_pc_offset;
+
+  wire invalid_instruction = ~(|instruction) | ~valid_decoder_output;
+
+  always_comb begin
+    if (opcode == 7'b1100011)
+      unique case (funct3)
+        3'h0:
+          if (regs_a_data == regs_b_data) use_custom_pc_offset = 1;
+          else use_custom_pc_offset = 0;
+        3'h1:
+          if (regs_a_data != regs_b_data) use_custom_pc_offset = 1; 
+          else use_custom_pc_offset = 0;
+        3'h4:
+          if (regs_a_data < regs_b_data) use_custom_pc_offset = 1; 
+          else use_custom_pc_offset = 0;
+        3'h5:
+          if (regs_a_data >= regs_b_data) use_custom_pc_offset = 1; 
+          else use_custom_pc_offset = 0;
+        3'h6:
+          if (regs_a_data < regs_b_data) use_custom_pc_offset = 1; 
+          else use_custom_pc_offset = 0;
+        3'h7:
+          if (regs_a_data >= regs_b_data) use_custom_pc_offset = 1; 
+          else use_custom_pc_offset = 0;
+        default: use_custom_pc_offset = 0;
+      endcase
+    else use_custom_pc_offset = 0;
+      
+    if (use_custom_pc_offset) pc_offset = imm >> 2;
+    else pc_offset = 32'b1;
+  end
+
+  always_ff @(posedge clk)
+    if (rst) pc <= 0;
+    else if (clk_en)
+      if (~invalid_instruction)
+        pc <= pc + pc_offset;
+      else $finish();
 
   //STORE
   //TODO: move into module
