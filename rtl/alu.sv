@@ -55,7 +55,7 @@ always_comb begin
         3'b111: o_rd_data = i_rs1_data & i_imm; // ANDI
         3'b001: o_rd_data = i_rs1_data << i_imm[4:0]; // SLLI
         3'b101: begin // SRLI or SRAI
-          if (i_funct7[5])
+          if (i_imm[11:5] == 6'h20)
             o_rd_data = $signed(i_rs1_data) >>> i_imm[4:0]; // SRAI
           else
             o_rd_data = i_rs1_data >> i_imm[4:0]; // SRLI
