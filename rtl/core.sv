@@ -185,12 +185,12 @@ module core #(
       7'b1101111: begin // JAL
         o_read_req = 1;
         regs_write_en = 1;
-        regs_write_data = (pc << 2);
+        regs_write_data = (pc << 2) + 4;
       end
       7'b1100111: begin // JALR
         o_read_req = 1;
         regs_write_en = 1;
-        regs_write_data = (pc << 2);
+        regs_write_data = (pc << 2) + 4;
       end
       default: begin
         o_read_req = 0;
