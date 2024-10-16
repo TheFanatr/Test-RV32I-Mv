@@ -3,7 +3,7 @@ phys = 0;
 
 MEMORY
 {
-    RAM (rwx) : ORIGIN = 0, LENGTH = 64K
+  RAM (rwx) : ORIGIN = 0, LENGTH = 64K
 }
 
 SECTIONS
@@ -33,5 +33,10 @@ SECTIONS
     *(.rodata .rodata.*)
   } > RAM
 
+  .exit :
+  {
+    . = ALIGN(4);
+    KEEP(*(.exit))
+  } > RAM
 
 }

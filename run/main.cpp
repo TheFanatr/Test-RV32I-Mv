@@ -42,9 +42,9 @@ int main(int argc, char **argv) {
 
   top->clk = !top->clk;
   step();
-    top->clk = !top->clk;
+  top->clk = !top->clk;
   step();
-    top->clk = !top->clk;
+  top->clk = !top->clk;
   step();
 
   top->rst = 0;
@@ -59,27 +59,40 @@ int main(int argc, char **argv) {
   top->clk = !top->clk;
   step();
 
+  tfp->open("run.fst");
+
   while (!top->booted) {
-      // contextp->timeInc(1);
+    top->clk = 1;
+    top->eval();
 
-    	  top->clk = 1;
-				top->eval();
-				top->clk = 0;
-				top->eval();
+    top->clk = 0;
+    top->eval();
 
-      top->rx = (*uart)(top->tx);
-      //  tfp->dump(contextp->time());
+    top->rx = (*uart)(top->tx);
+
+    // contextp->timeInc(1);
+    // tfp->dump(contextp->time());
   }
 
-  tfp->open("run.fst");
-  //while (!contextp->gotFinish()) {
-  for(int i = 0; i < 5000; i++) {
-    	  top->clk = !top->clk;
-        top->rx = (*uart)(top->tx);
+  // while (!top->booted) {
+  //   top->clk = !top->clk;
+  //   top->rx = (*uart)(top->tx);
 
-				top->eval();
-        tfp->dump(contextp->time());
-        contextp->timeInc(1);
+  //   top->eval();
+  //   tfp->dump(contextp->time());
+  //   contextp->timeInc(1);
+  // }
+
+  // printf("Booted\n");
+
+  while (!contextp->gotFinish()) {
+  // for (int i = 0; i < 5000; i++) {
+    top->clk = !top->clk;
+    top->rx = (*uart)(top->tx);
+
+    top->eval();
+    tfp->dump(contextp->time());
+    contextp->timeInc(1);
   }
 
   tfp->close();
