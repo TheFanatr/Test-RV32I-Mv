@@ -54,7 +54,7 @@ module core #(
 
   wire [DATA_WIDTH:0] alu_out_data;
 
-  bit [31:0] pc_jump;
+  bit signed [31:0] pc_jump;
   jump_mode_e jump_mode;
 
   wire invalid_instruction = ~(|instruction) | ~valid_decoder_output;
@@ -78,8 +78,8 @@ module core #(
 
     unique case (jump_mode)
       JM_NEXT: pc_jump = 32'b1;
-      JM_RELATIVE: pc_jump = ($signed(imm) >>> 2);
-      JM_ABSOLUTE: pc_jump = (regs_a_data >>> 2) + ($signed(imm) >>> 2);
+      JM_RELATIVE: pc_jump = $signed(imm) >>> 2;
+      JM_ABSOLUTE: pc_jump = $signed($signed(regs_a_data) >>> 2) + $signed($signed(imm) >>> 2); // .. one neg one pos
     endcase
   end
 
@@ -89,7 +89,7 @@ module core #(
       if (~invalid_instruction)
         if (jump_mode == JM_ABSOLUTE)
           pc <= pc_jump;
-        else 
+        else
           pc <= pc + pc_jump;
       else $finish();
 
@@ -135,12 +135,12 @@ module core #(
   end
 
   assign regs_a_addr = rs1;
-  assign o_write_addr = (regs_a_data + imm) >> 2;
+  assign o_write_addr = ($signed(regs_a_data) >>> 2) + ($signed(imm) >>> 2);
 
   assign regs_b_addr = rs2;
-  assign o_read_addr= (regs_a_data + imm) >> 2;
+  assign o_read_addr = ($signed(regs_a_data) >>> 2) + ($signed(imm) >>> 2);
   
-  assign regs_write_addr  = rd;
+  assign regs_write_addr = rd;
 
   //LOAD
   always_comb begin
@@ -149,13 +149,40 @@ module core #(
         o_read_req = 1;
         regs_write_en = 1;
 
+        // $display(($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11});
+        // $display(funct3);
         case (funct3)
           // Sign-extend byte to 32 bits 
-          3'b000: regs_write_data = {{24{i_read_data[7]}}, i_read_data[7:0]}; // LB
-          3'b001: regs_write_data = {{16{i_read_data[15]}}, i_read_data[15:0]}; // LH
-          3'b010: regs_write_data = i_read_data; // LW
-          3'b100: regs_write_data = {24'd0, i_read_data[7:0]}; // LBU
-          3'b101: regs_write_data = {16'd0, i_read_data[15:0]}; // LHU
+          3'b000: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LB
+            34'b00: regs_write_data = {{24{i_read_data[7]}}, i_read_data[7:0]};
+            34'b01: regs_write_data = {{24{i_read_data[15]}}, i_read_data[15:8]};
+            34'b10: regs_write_data = {{24{i_read_data[23]}}, i_read_data[23:16]};
+            34'b11: regs_write_data = {{24{i_read_data[31]}}, i_read_data[31:24]};
+          endcase
+          3'b001: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LH
+            34'b00: regs_write_data = {{16{i_read_data[15]}}, i_read_data[15:0]};
+            34'b01: regs_write_data = {{16{i_read_data[23]}}, i_read_data[23:7]};
+            34'b10: regs_write_data = {{16{i_read_data[31]}}, i_read_data[31:16]};
+            34'b11: regs_write_data = {{24{i_read_data[31]}}, i_read_data[31:24]}; //FIXME - UPPER BYTE FAILS
+          endcase
+          3'b010: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LW
+            34'b00: regs_write_data = i_read_data;
+            34'b01: regs_write_data = {{8{i_read_data[31]}}, i_read_data[31:8]}; //FIXME - UPPER BYTE FAILS
+            34'b10: regs_write_data = {{16{i_read_data[31]}}, i_read_data[31:16]}; //FIXME - UPPER 2 BYTES FAIL 
+            34'b11: regs_write_data = {{24{i_read_data[31]}}, i_read_data[31:24]}; //FIXME - UPPER 3 BYTES FAIL
+          endcase
+          3'b100: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LBU
+            34'b00: regs_write_data = {24'd0, i_read_data[7:0]};
+            34'b01: regs_write_data = {24'd0, i_read_data[15:8]};
+            34'b10: regs_write_data = {24'd0, i_read_data[23:16]};
+            34'b11: regs_write_data = {24'd0, i_read_data[31:24]};
+          endcase
+          3'b101: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LHU
+            34'b00: regs_write_data = {16'd0, i_read_data[15:0]};
+            34'b01: regs_write_data = {16'd0, i_read_data[23:7]}; //FIXME - UPPER BYTE FAILS
+            34'b10: regs_write_data = {16'd0, i_read_data[31:16]}; //FIXME - UPPER 2 BYTES FAIL 
+            34'b11: regs_write_data = {24'd0, i_read_data[31:24]}; //FIXME - UPPER 3 BYTES FAIL
+          endcase
           default: begin
             regs_write_en = 0;
             regs_write_data = 32'd0;

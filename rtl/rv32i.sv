@@ -78,14 +78,14 @@ module rv32i (
     .o(read_addr)
   );
 
-    Mux2  #(.BITS(1)) ram_write_enable_mux(
+  Mux2  #(.BITS(1)) ram_write_enable_mux(
     .a(rb_write_enable),// not booted
     .b(rc_write_enable),// booted
     .s(booted),
     .o(write_enable)
   );
 
-    Mux2  #(.BITS(3)) ram_byte_enable_mux(
+  Mux2  #(.BITS(3)) ram_byte_enable_mux(
     .a(rb_byte_enable),// not booted
     .b(rc_byte_enable),// booted
     .s(booted),

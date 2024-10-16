@@ -3,14 +3,14 @@ void puts(char *s);
 
 
 void main() { 
-  puts("Hello World\n"); 
-  for (;;);
+  puts("Hello sailor.\n");
+  puts("What's for breakfast?\n");
 }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 void putc(int c) {
-  volatile char *p = (void *)4096;
+  volatile char *p = (char *)(void *)512;
   *p = (char)c;
 }
 #pragma GCC diagnostic pop
