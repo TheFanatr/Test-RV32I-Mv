@@ -17,3 +17,4 @@ obj_dir
 *.bak
 __pycache__
 *.fst.hier
+.$MyRv32I.drawio.bkp
