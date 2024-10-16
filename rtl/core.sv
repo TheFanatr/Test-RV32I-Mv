@@ -78,8 +78,8 @@ module core #(
 
     unique case (jump_mode)
       JM_NEXT: pc_jump = 32'b1;
-      JM_RELATIVE: pc_jump = ($signed(imm) >> 2);
-      JM_ABSOLUTE: pc_jump = regs_a_data + (imm >> 2);
+      JM_RELATIVE: pc_jump = ($signed(imm) >>> 2);
+      JM_ABSOLUTE: pc_jump = (regs_a_data >>> 2) + ($signed(imm) >>> 2);
     endcase
   end
 
@@ -135,10 +135,10 @@ module core #(
   end
 
   assign regs_a_addr = rs1;
-  assign o_write_addr = regs_a_data + imm;
+  assign o_write_addr = (regs_a_data + imm) >> 2;
 
   assign regs_b_addr = rs2;
-  assign o_read_addr= regs_a_data + imm;
+  assign o_read_addr= (regs_a_data + imm) >> 2;
   
   assign regs_write_addr  = rd;
 

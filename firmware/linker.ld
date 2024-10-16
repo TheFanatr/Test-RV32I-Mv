@@ -16,6 +16,11 @@ SECTIONS
     KEEP(*(.entry))
   } > RAM
 
+  .text :
+  {
+    . = ALIGN(4);  
+    *(.text .text.*)
+  } > RAM
 
   .data :
   {
@@ -28,9 +33,5 @@ SECTIONS
     *(.rodata .rodata.*)
   } > RAM
 
-  .text :
-  {
-    . = ALIGN(4);  
-    *(.text .text.*)
-  } > RAM
+
 }

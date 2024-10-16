@@ -1,9 +1,11 @@
-void kmain();
+void main();
 void puts(char *s);
 
-__attribute__((section(".entry"))) void _start() { kmain(); }
 
-void kmain() { puts("Hello World\n"); }
+void main() { 
+  puts("Hello World\n"); 
+  for (;;);
+}
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"

@@ -41,10 +41,10 @@ module ram #(
 `endif
 
 //2**ADDR_WIDTH - 1 
-(* ram_style = "block" *) logic [7:0] mem_a [1024-1:0];
-(* ram_style = "block" *) logic [7:0] mem_b [1024-1:0];
-(* ram_style = "block" *) logic [7:0] mem_c [1024-1:0];
-(* ram_style = "block" *) logic [7:0] mem_d [1024-1:0];
+(* ram_style = "block" *) logic [7:0] mem_a [8192-1:0];
+(* ram_style = "block" *) logic [7:0] mem_b [8192-1:0];
+(* ram_style = "block" *) logic [7:0] mem_c [8192-1:0];
+(* ram_style = "block" *) logic [7:0] mem_d [8192-1:0];
 
 
 always_ff @(posedge clk) begin
@@ -62,8 +62,7 @@ always_ff @(posedge clk) begin
     end
 end
 
-always_ff @(posedge clk or negedge clk)
-    o_read_data = {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
+assign    o_read_data = {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
 
 always_ff @(posedge clk or negedge clk)
     o_read_fetch_data = {mem_d[i_read_fetch_addr], mem_c[i_read_fetch_addr], mem_b[i_read_fetch_addr], mem_a[i_read_fetch_addr]};

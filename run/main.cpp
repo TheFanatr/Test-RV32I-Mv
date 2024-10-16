@@ -72,7 +72,8 @@ int main(int argc, char **argv) {
   }
 
   tfp->open("run.fst");
-  while (!contextp->gotFinish()) {
+  //while (!contextp->gotFinish()) {
+  for(int i = 0; i < 5000; i++) {
     	  top->clk = !top->clk;
         top->rx = (*uart)(top->tx);
 
