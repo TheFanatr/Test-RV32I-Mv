@@ -34,20 +34,17 @@ module fifo #(
     if (rst_n) begin
       wr_ptr   <= 0;
       full_reg <= 0;
-    end else if (wr_en && !full_reg) begin
+      rd_ptr <= 0;
+      empty_reg <= 1;
+    end
+    if (wr_en && !full_reg) begin
       mem[wr_ptr] <= din;
       wr_ptr <= wr_ptr + 1;
       if (wr_ptr + 1 == rd_ptr) full_reg <= 1;
       empty_reg <= 0;
     end
-  end
 
-  // Read operation
-  always @(posedge clk or negedge rst_n) begin
-    if (rst_n) begin
-      rd_ptr <= 0;
-      empty_reg <= 1;
-    end else if (rd_en && !empty_reg) begin
+    if (rd_en && !empty_reg) begin
       rd_ptr <= rd_ptr + 1;
       if (rd_ptr + 1 == wr_ptr) empty_reg <= 1;
       full_reg <= 0;
