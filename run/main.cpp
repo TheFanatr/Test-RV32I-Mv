@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 
   tfp->open("run.fst");
 
-  while (!top->booted) {
+  /*while (!top->booted) {
     top->clk = 1;
     top->eval();
 
@@ -72,8 +72,7 @@ int main(int argc, char **argv) {
 
     // contextp->timeInc(1);
     // tfp->dump(contextp->time());
-  }
-
+  }*/
   // while (!top->booted) {
   //   top->clk = !top->clk;
   //   top->rx = (*uart)(top->tx);
@@ -85,14 +84,20 @@ int main(int argc, char **argv) {
 
   // printf("Booted\n");
 
-  while (!contextp->gotFinish()) {
-  // for (int i = 0; i < 5000; i++) {
-    top->clk = !top->clk;
-    top->rx = (*uart)(top->tx);
-
+  //while (!contextp->gotFinish()) {
+  while (true) {
+   //for (int i = 0; i < 10000; i++) {
+    top->clk = 1;
     top->eval();
-    tfp->dump(contextp->time());
-    contextp->timeInc(1);
+    if(top->booted) tfp->dump(contextp->time());
+    if(top->booted) contextp->timeInc(1);
+
+    top->clk = 0;
+    top->eval();
+    if(top->booted) tfp->dump(contextp->time());
+    if(top->booted) contextp->timeInc(1);
+
+    top->rx = (*uart)(top->tx);
   }
 
   tfp->close();
