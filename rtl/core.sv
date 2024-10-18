@@ -67,9 +67,9 @@ module core #(
     RM_RAM_WRITE_WAIT // prefetches
   } run_mode_e;
 
-  run_mode_e [1:0] run_mode;
+  run_mode_e run_mode;
   // reg act;
-  bit act = run_mode == RM_ACT;
+  wire act = run_mode == RM_ACT;
 
   always_comb begin
     case (opcode)
