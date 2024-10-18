@@ -119,7 +119,7 @@ module core #(
             run_mode <= RM_RAM_READ_WAIT;
           end
         endcase
-      else $finish();
+     // else $finish();
 
   always_ff @(posedge clk)
     case(opcode)

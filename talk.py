@@ -67,7 +67,7 @@ CHECK = Checks.Off  # Default check mode
 FILE = 'firmware/obj_dir/main.bin'
 START_QUAD_WORD_ADDRESS = 0x00000000_00  # Default start address
 
-BOOT = True
+BOOT = False
 
 LEVEL = Levels.Fatal | Levels.Error | Levels.Status  # Default to Fatal, Error, and Status
 
