@@ -106,6 +106,8 @@ module rv32i (
     .o(write_data)
   );
 
+    wire [7:0] write_uart;
+    wire write_uart_en;
   ram u_ram(
   .clk(clk),
   .clk_en(clk_en),
@@ -122,9 +124,13 @@ module rv32i (
   .i_write_enable(write_enable),
   .i_byte_enable(byte_enable),
   .i_write_addr(write_addr),
-  .i_write_data(write_data)
+  .i_write_data(write_data),
+
+      .o_write_uart(write_uart),
+    .o_write_uart_en(write_uart_en)
   );
   wire bios_rst;
+
 
   core u_core (
     .clk(clk),
@@ -144,6 +150,7 @@ module rv32i (
     .o_write_addr(rc_write_addr),
     .o_write_data(rc_write_data),
 
+
     .o_ebreak(ebreak)
   );
 
@@ -151,6 +158,10 @@ module rv32i (
   .clk(clk),
   .clk_en(clk_en),
   .rst(rst),
+
+
+    .write_uart(write_uart),
+    .write_uart_en(write_uart_en),
 
   .i_ebreak(ebreak),
 

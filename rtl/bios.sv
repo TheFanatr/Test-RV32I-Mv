@@ -1,5 +1,62 @@
 `timescale 1ns / 1ps
 
+module fifo #(
+    parameter WIDTH = 8,   // Width of the data bus
+    parameter DEPTH = 128  // Depth of the FIFO (number of entries)
+) (
+    input  wire             clk,    // Clock input
+    input  wire             rst_n,  // Active-low reset
+    input  wire             wr_en,  // Write enable
+    input  wire             rd_en,  // Read enable
+    input  wire [WIDTH-1:0] din,    // Data input
+    output wire [WIDTH-1:0] dout,   // Data output
+    output wire             full,   // FIFO full flag
+    output wire             empty   // FIFO empty flag
+);
+
+  // Internal memory for the FIFO
+  reg [WIDTH-1:0] mem[0:DEPTH-1];
+
+  // Write and read pointers
+  reg [$clog2(DEPTH)-1:0] wr_ptr = 0;
+  reg [$clog2(DEPTH)-1:0] rd_ptr = 0;
+
+  // Status signals
+  reg full_reg = 0;
+  reg empty_reg = 1;
+
+  assign full  = full_reg;
+  assign empty = empty_reg;
+  assign dout  = mem[rd_ptr];
+
+  // Write operation
+  always @(posedge clk or negedge rst_n) begin
+    if (rst_n) begin
+      wr_ptr   <= 0;
+      full_reg <= 0;
+    end else if (wr_en && !full_reg) begin
+      mem[wr_ptr] <= din;
+      wr_ptr <= wr_ptr + 1;
+      if (wr_ptr + 1 == rd_ptr) full_reg <= 1;
+      empty_reg <= 0;
+    end
+  end
+
+  // Read operation
+  always @(posedge clk or negedge rst_n) begin
+    if (rst_n) begin
+      rd_ptr <= 0;
+      empty_reg <= 1;
+    end else if (rd_en && !empty_reg) begin
+      rd_ptr <= rd_ptr + 1;
+      if (rd_ptr + 1 == wr_ptr) empty_reg <= 1;
+      full_reg <= 0;
+    end
+  end
+
+endmodule
+
+
 typedef enum logic [3:0] {
   BD_READ,
   BD_STORE,
@@ -10,7 +67,8 @@ typedef enum logic [3:0] {
 typedef enum logic [3:0] {
   BN_START,
   BN_ACT,
-  BN_DIE
+  BN_DIE,
+  BN_DIE2
 } bios_none_state_t;
 
 typedef enum logic [3:0] {
@@ -110,9 +168,24 @@ module bios #(
      */
     output logic [8-1:0] o_data,
     output wire          o_valid,
-    input  wire          i_out_ready
-);
+    input  wire          i_out_ready,
 
+
+    input [7:0] write_uart,
+    input write_uart_en
+);
+  reg rd_en;
+  wire [8-1:0] dout;
+  wire empty;
+  fifo u_fifo (
+      .clk  (clk),
+      .rst_n(rst),
+      .wr_en(write_uart_en),
+      .rd_en(rd_en),
+      .din  (write_uart),
+      .dout (dout),
+      .empty(empty)
+  );
 
   dispatcher_state_t dispatcher;
   none_state_t none;
@@ -205,9 +278,10 @@ module bios #(
       if (i_ebreak) none <= {BN_START, 4'b0_0_0_0};
       else
         case (none.state)
-          BN_START:
-          if (dispatcher.trigger_no_arg) none <= {BN_ACT, 4'b0_0_0_0};
-          else none <= {BN_START, 4'b0_0_0_0};
+          BN_START: begin
+            if (dispatcher.trigger_no_arg) none <= {BN_ACT, 4'b0_0_0_0};
+            else none <= {BN_START, 4'b0_0_0_0};
+          end
           BN_ACT:
           case (opcode)
             BOP_NOP:  none <= {BN_START, 4'b0_0_0_0};
@@ -235,7 +309,19 @@ module bios #(
             end else none <= {BN_ACT, 4'b0_0_1_1};
             default:  none <= {BN_START, 4'b0_0_0_0};
           endcase
-          BN_DIE: none <= {BN_DIE, 4'b1_0_0_0};
+          BN_DIE: begin
+            if (i_out_ready & ~empty) begin
+              o_data <= dout;
+              none   <= {BN_DIE2, 4'b1_0_0_1};
+            end else begin
+              none  <= {BN_DIE, 4'b1_0_0_0};
+              rd_en <= 1'd0;
+            end
+          end
+          BN_DIE2: begin
+              rd_en  <= 1'd1;
+              none   <= {BN_DIE, 4'b1_0_0_0};
+          end
 
           default: none <= {BN_START, 4'b0_0_0_0};
         endcase
