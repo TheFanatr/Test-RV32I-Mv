@@ -27,11 +27,9 @@ module core #(
     output logic o_ebreak
 );
 
-  reg [31:0] pc;
+  logic [31:0] pc;
 
   wire [31:0] instruction;
-
-  wire valid_decoder_output;
 
   wire  [ 6:0] opcode;
   wire  [ 7:0] funct7;
@@ -45,7 +43,6 @@ module core #(
   logic [DATA_WIDTH:0] regs_write_data;
   logic regs_write_en;
 
-
   wire  [ 4:0] regs_a_addr;
   wire  [DATA_WIDTH:0] regs_a_data;
 
@@ -54,10 +51,25 @@ module core #(
 
   wire [DATA_WIDTH:0] alu_out_data;
 
+  wire valid_decoder_output;
+
+  wire invalid_instruction = ~(|instruction) | ~valid_decoder_output;
+
   bit signed [31:0] pc_jump;
   jump_mode_e jump_mode;
 
-  wire invalid_instruction = ~(|instruction) | ~valid_decoder_output;
+  bit [31:0] next_pc;
+  bit [31:0] pc_to_fetch;
+
+  typedef enum reg [1:0] { 
+    RM_RAM_READ_WAIT,
+    RM_ACT,
+    RM_RAM_WRITE_WAIT // prefetches
+  } run_mode_e;
+
+  run_mode_e [1:0] run_mode;
+  // reg act;
+  bit act = run_mode == RM_ACT;
 
   always_comb begin
     case (opcode)
@@ -68,7 +80,6 @@ module core #(
         3'h5: jump_mode = $signed(regs_a_data) >= $signed(regs_b_data) ? JM_RELATIVE : JM_NEXT; // BGE
         3'h6: jump_mode = regs_a_data < regs_b_data ? JM_RELATIVE : JM_NEXT; // BLTU
         3'h7: jump_mode = regs_a_data >= regs_b_data ? JM_RELATIVE : JM_NEXT; // BGEU
-        
         default: jump_mode = JM_NEXT;
       endcase
       7'b1101111: jump_mode = JM_RELATIVE; // JAL
@@ -81,16 +92,33 @@ module core #(
       JM_RELATIVE: pc_jump = $signed(imm) >>> 2;
       JM_ABSOLUTE: pc_jump = $signed($signed(regs_a_data) >>> 2) + $signed($signed(imm) >>> 2); // .. one neg one pos
     endcase
+
+    unique case (jump_mode)
+      JM_ABSOLUTE: next_pc = pc_jump;
+      default: next_pc = pc + pc_jump;
+    endcase
+
+    unique case (run_mode)
+      RM_RAM_WRITE_WAIT: pc_to_fetch = next_pc;
+      default: pc_to_fetch = pc;
+    endcase
   end
 
   always_ff @(posedge clk)
-    if (rst) pc <= 0;
+    if (rst) begin
+      pc <= -1;
+      run_mode <= RM_RAM_WRITE_WAIT;
+    end
     else if (clk_en)
-      if (~invalid_instruction)
-        if (jump_mode == JM_ABSOLUTE)
-          pc <= pc_jump;
-        else
-          pc <= pc + pc_jump;
+      if (~invalid_instruction | pc == {32{1'b1}})
+        unique case (run_mode)
+          RM_RAM_READ_WAIT: run_mode <= RM_ACT;
+          RM_ACT: run_mode <= RM_RAM_WRITE_WAIT;
+          RM_RAM_WRITE_WAIT: begin
+            pc <= next_pc;
+            run_mode <= RM_RAM_READ_WAIT;
+          end
+        endcase
       else $finish();
 
   always_ff @(posedge clk)
@@ -109,17 +137,17 @@ module core #(
         3'b000: begin
           o_write_data   = {24'd0, regs_b_data[7:0]};
           o_byte_enable  = 4'b0001;
-          o_write_enable = 1;
+          o_write_enable = act;
         end
         3'b001: begin
           o_write_data   = {16'd0, regs_b_data[15:0]};
           o_byte_enable  = 4'b0011;
-          o_write_enable = 1;
+          o_write_enable = act;
         end
         3'b010: begin
           o_write_data   = regs_b_data[31:0];
           o_byte_enable  = 4'b1111;
-          o_write_enable = 1;
+          o_write_enable = act;
         end
         default: begin
           o_write_data   = 32'd0;
@@ -147,7 +175,7 @@ module core #(
     case (opcode)
       7'b0000011: begin // Load
         o_read_req = 1;
-        regs_write_en = 1;
+        regs_write_en = act;
 
         // $display(($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11});
         // $display(funct3);
@@ -191,32 +219,32 @@ module core #(
       end
       7'b0110011: begin // from ALU
         o_read_req = 1;
-        regs_write_en = 1;
+        regs_write_en = act;
         regs_write_data = alu_out_data;
         end
       7'b0010011: begin // from ALU i
         o_read_req = 1;
-        regs_write_en = 1;
+        regs_write_en = act;
         regs_write_data = alu_out_data;
       end
       7'b0110111: begin // LUI
         o_read_req = 1;
-        regs_write_en = 1;
+        regs_write_en = act;
         regs_write_data = imm;
       end
       7'b0010111: begin // AUIPC
         o_read_req = 1;
-        regs_write_en = 1;
+        regs_write_en = act;
         regs_write_data = (pc << 2) + imm;
       end
       7'b1101111: begin // JAL
         o_read_req = 1;
-        regs_write_en = 1;
+        regs_write_en = act;
         regs_write_data = (pc << 2) + 4;
       end
       7'b1100111: begin // JALR
         o_read_req = 1;
-        regs_write_en = 1;
+        regs_write_en = act;
         regs_write_data = (pc << 2) + 4;
       end
       default: begin
@@ -251,7 +279,7 @@ module core #(
     .clk_en(clk_en),
     .rst(rst),
 
-    .i_pc(pc),
+    .i_pc(pc_to_fetch),
 
     .o_read_fetch_addr(o_read_fetch_addr),
     .i_read_fetch_data(i_read_fetch_data),

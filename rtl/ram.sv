@@ -11,12 +11,12 @@ module ram #(
     //Read
     input i_read_req,
     input [ADDR_WIDTH:0] i_read_addr,
-    output [DATA_WIDTH:0] o_read_data,
+    output reg [DATA_WIDTH:0] o_read_data,
 
 
     //Read fetch
     input [ADDR_WIDTH:0] i_read_fetch_addr,
-    output [DATA_WIDTH:0] o_read_fetch_data,
+    output reg [DATA_WIDTH:0] o_read_fetch_data,
 
     // Write
     input i_write_enable,
@@ -75,11 +75,10 @@ always_ff @(posedge clk) begin
     end
 end
 
-// always_ff @(posedge clk)
-//     o_read_data <= {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
-    assign o_read_data = {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
+always_ff @(posedge clk)
+    o_read_data <= {mem_d[i_read_addr], mem_c[i_read_addr], mem_b[i_read_addr], mem_a[i_read_addr]};
 
-// always_ff @(posedge clk)
-    assign o_read_fetch_data = {mem_d[i_read_fetch_addr], mem_c[i_read_fetch_addr], mem_b[i_read_fetch_addr], mem_a[i_read_fetch_addr]};
+always_ff @(posedge clk)
+    o_read_fetch_data <= {mem_d[i_read_fetch_addr], mem_c[i_read_fetch_addr], mem_b[i_read_fetch_addr], mem_a[i_read_fetch_addr]};
 
 endmodule
