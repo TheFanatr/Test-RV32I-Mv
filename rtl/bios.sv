@@ -30,7 +30,7 @@ module fifo #(
   assign dout  = mem[rd_ptr];
 
   // Write operation
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (rst_n) begin
       wr_ptr   <= 0;
       full_reg <= 0;
