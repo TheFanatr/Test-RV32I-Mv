@@ -7,20 +7,21 @@
       "request": "launch",
       "program": "talk.py",
       "args": [
-        "--host", "localhost", 
-        "--port", "8880", 
-        "--retry-interval", "5", 
-        
-        "--minor-pause", "0.0", 
-        "--major-pause", "0.0", 
-        
-        "--write", 
-        "--check", "Off", 
-        "--file", "firmware/obj_dir/main.bin", 
-        "--start-address", "0x00000000", 
-        
-        "--boot", 
-        
+        "--host", "localhost",
+        "--port", "8880",
+        "--retry-interval", "5",
+
+        "--minor-pause", "0.0",
+        "--major-pause", "0.0",
+
+        "--write",
+        "--check", "Off",
+        "--file", "firmware/obj_dir/main.bin",
+        "--start-address", "0x00000000",
+
+        "--boot",
+        "--stream", "-1",
+
         "--log-level", "Fatal,Error,Status"
       ]
     }

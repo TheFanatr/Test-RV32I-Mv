@@ -2,7 +2,8 @@
 
 module ram #(
     ADDR_WIDTH = 31,
-    DATA_WIDTH = 31
+    DATA_WIDTH = 31,
+    ADDR_COUNT = 1024
 )(
     input clk,
     input clk_en,
@@ -24,7 +25,7 @@ module ram #(
     input [ADDR_WIDTH:0] i_write_addr,
     input [DATA_WIDTH:0] i_write_data,
 
-
+    // UART
     output [7:0] o_write_uart,
     output o_write_uart_en
 );
@@ -44,33 +45,32 @@ module ram #(
     end
 `endif
 
-//2**ADDR_WIDTH - 1 
-(* ram_style = "block" *) logic [7:0] mem_a [1024-1:0];
-(* ram_style = "block" *) logic [7:0] mem_b [1024-1:0];
-(* ram_style = "block" *) logic [7:0] mem_c [1024-1:0];
-(* ram_style = "block" *) logic [7:0] mem_d [1024-1:0];
-  assign o_write_uart = i_write_data[7:0];
+//2**ADDR_WIDTH - 1
+(* ram_style = "block" *) logic [7:0] mem_a [ADDR_COUNT-1:0];
+(* ram_style = "block" *) logic [7:0] mem_b [ADDR_COUNT-1:0];
+(* ram_style = "block" *) logic [7:0] mem_c [ADDR_COUNT-1:0];
+(* ram_style = "block" *) logic [7:0] mem_d [ADDR_COUNT-1:0];
+
+assign o_write_uart = i_write_data[7:0];
+
 always_ff @(posedge clk)
     if (clk_en)
-        if (i_read_addr == 32'd128) begin
-            if (i_write_enable) begin
+        if (i_write_addr == ADDR_COUNT)
+            if (i_write_enable)
                 if (i_byte_enable[0]) begin
-                    $write("%c", o_write_uart);
+                    // $write("%c", o_write_uart);
                     o_write_uart_en <= 1'b1;
-                end 
-                else        o_write_uart_en <= 1'b0;
-            end
-            else        o_write_uart_en <= 1'b0;
-        end
-    else    o_write_uart_en <= 1'b0;
-    else    o_write_uart_en <= 1'b0;
+                end else o_write_uart_en <= 1'b0;
+            else o_write_uart_en <= 1'b0;
+        else o_write_uart_en <= 1'b0;
+    else o_write_uart_en <= 1'b0;
 
 
 always_ff @(posedge clk) begin
     if (clk_en) begin
         if (i_write_enable) begin
             if (i_byte_enable[0]) begin
-            
+                // if (i_read_addr == 32'd128)
                     // $display("a: %c", i_write_data[7:0]);
                 mem_a[i_write_addr] <= i_write_data[7:0];
             end
