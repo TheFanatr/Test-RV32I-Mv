@@ -25,9 +25,9 @@ module fifo #(
   reg full_reg = 0;
   reg empty_reg = 1;
 
-  assign full  = full_reg;
+  assign full = full_reg;
   assign empty = empty_reg;
-  assign dout  = mem[rd_ptr];
+  assign dout = mem[rd_ptr];
 
   // Write operation
   always @(posedge clk) begin

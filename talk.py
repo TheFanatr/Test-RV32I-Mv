@@ -1,3 +1,4 @@
+import signal
 import socket
 import argparse
 import sys
@@ -7,7 +8,7 @@ from enum import Enum, Flag, auto
 
 #REVIEW - apply FIXME anchor for BIOS state machine bug
 
-# Example command line ensuring all defaults:
+# Example command line ensuring all defaults, but all operations:
 # python3.13 script_name.py \
 #   -H localhost \
 #   -p 8880 \
@@ -19,6 +20,7 @@ from enum import Enum, Flag, auto
 #   -f firmware/obj_dir/main.bin \
 #   --start-address 0x00000000
 #   --boot \
+#   --stream -1 \
 #   -log-level Fatal,Error,Status \
 
 class Checks(Enum):
@@ -69,6 +71,8 @@ START_QUAD_WORD_ADDRESS = 0x00000000_00  # Default start address
 
 BOOT = False
 
+STREAM = 0
+
 LEVEL = Levels.Fatal | Levels.Error | Levels.Status  # Default to Fatal, Error, and Status
 
 class Codes(Enum):
@@ -115,6 +119,11 @@ def report(level: Levels, *args, **kwargs):
 
 def start():
     try:
+        def halt(number, frame):
+            raise KeyboardInterrupt
+
+        signal.signal(signal.SIGINT, halt)
+        
         # Attempt to connect to the server with retries every RETRY_INTERVAL seconds
         while True:
             # Create a TCP socket
@@ -254,6 +263,11 @@ def talk(link, data):
         send(Codes.RST.raw_bytes, MAJOR_PAUSE)
         send(Codes.BOOT.raw_bytes, MAJOR_PAUSE)
         report(Levels.Status, "Sent reset and boot command.")
+    
+    if STREAM:
+        for _ in range(STREAM):
+            received_byte = link.recv(1, socket.MSG_WAITALL)
+            print(str(received_byte, 'utf-8'), end='', flush=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Send binary file over TCP using BIOS protocol.')
@@ -264,9 +278,9 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--retry-interval', type=float, default=RETRY_INTERVAL,
                         help=f'Pause in seconds between connection attempts (default: {RETRY_INTERVAL})')
 
-    parser.add_argument('-s', '--minor-pause', type=float, default=MINOR_PAUSE,
+    parser.add_argument('--minor-pause', type=float, default=MINOR_PAUSE,
                         help=f'Pause in seconds between TCP socket writes for the same BIOS command (default: {MINOR_PAUSE})')
-    parser.add_argument('-l', '--major-pause', type=float, default=MAJOR_PAUSE,
+    parser.add_argument('--major-pause', type=float, default=MAJOR_PAUSE,
                         help=f'Pause in seconds between commands (default: {MAJOR_PAUSE})')
 
     parser.add_argument('-w', '--write', action='store_true', default=WRITE,
@@ -280,6 +294,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-b', '--boot', action='store_true', default=BOOT,
                         help=f'Enable boot command after operations (default: {BOOT})')
+    
+    parser.add_argument('-s', '--stream', type=int, default=STREAM,
+                        help=f'Number of bytes to stream of the UART over TCP data, after boot: -1 (all, CTRL-C to exit), ℤ⁺ (count) (default: {STREAM})')
 
     parser.add_argument('-o', '--log-level', type=lambda value: Levels.of(Levels[item.strip()] for item in value.replace('|', ',').split(',')), default=LEVEL,
                         help=f'Output/log level: Off, {", ".join(level.name for level in Levels)} (default: {",".join(level.name for level in LEVEL)})')
@@ -298,6 +315,8 @@ if __name__ == '__main__':
     START_QUAD_WORD_ADDRESS = args.start_address
 
     BOOT = args.boot
+    
+    STREAM = args.stream
 
     LEVEL = args.log_level
 

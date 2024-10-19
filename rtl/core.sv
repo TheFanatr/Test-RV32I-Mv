@@ -61,12 +61,6 @@ module core #(
   bit [31:0] next_pc;
   bit [31:0] pc_to_fetch;
 
-  typedef enum reg [1:0] { 
-    RM_RAM_READ_WAIT,
-    RM_ACT,
-    RM_RAM_WRITE_WAIT // prefetches
-  } run_mode_e;
-
   run_mode_e run_mode;
   // reg act;
   wire act = run_mode == RM_ACT;
@@ -167,7 +161,7 @@ module core #(
 
   assign regs_b_addr = rs2;
   assign o_read_addr = ($signed(regs_a_data) >>> 2) + ($signed(imm) >>> 2);
-  
+
   assign regs_write_addr = rd;
 
   //LOAD
@@ -189,14 +183,14 @@ module core #(
           endcase
           3'b001: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LH
             34'b00: regs_write_data = {{16{i_read_data[15]}}, i_read_data[15:0]};
-            34'b01: regs_write_data = {{16{i_read_data[23]}}, i_read_data[23:7]};
+            34'b01: regs_write_data = {{16{i_read_data[23]}}, i_read_data[23:8]};
             34'b10: regs_write_data = {{16{i_read_data[31]}}, i_read_data[31:16]};
             34'b11: regs_write_data = {{24{i_read_data[31]}}, i_read_data[31:24]}; //FIXME - UPPER BYTE FAILS
           endcase
           3'b010: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LW
             34'b00: regs_write_data = i_read_data;
             34'b01: regs_write_data = {{8{i_read_data[31]}}, i_read_data[31:8]}; //FIXME - UPPER BYTE FAILS
-            34'b10: regs_write_data = {{16{i_read_data[31]}}, i_read_data[31:16]}; //FIXME - UPPER 2 BYTES FAIL 
+            34'b10: regs_write_data = {{16{i_read_data[31]}}, i_read_data[31:16]}; //FIXME - UPPER 2 BYTES FAIL
             34'b11: regs_write_data = {{24{i_read_data[31]}}, i_read_data[31:24]}; //FIXME - UPPER 3 BYTES FAIL
           endcase
           3'b100: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LBU
@@ -207,8 +201,8 @@ module core #(
           endcase
           3'b101: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LHU
             34'b00: regs_write_data = {16'd0, i_read_data[15:0]};
-            34'b01: regs_write_data = {16'd0, i_read_data[23:7]}; //FIXME - UPPER BYTE FAILS
-            34'b10: regs_write_data = {16'd0, i_read_data[31:16]}; //FIXME - UPPER 2 BYTES FAIL 
+            34'b01: regs_write_data = {16'd0, i_read_data[23:8]}; //FIXME - UPPER BYTE FAILS
+            34'b10: regs_write_data = {16'd0, i_read_data[31:16]}; //FIXME - UPPER 2 BYTES FAIL
             34'b11: regs_write_data = {24'd0, i_read_data[31:24]}; //FIXME - UPPER 3 BYTES FAIL
           endcase
           default: begin
@@ -293,7 +287,7 @@ module core #(
     .rst(rst),
 
     .i_instruction(instruction),
-    
+
     .o_opcode(opcode),
     .o_funct7(funct7),
     .o_funct3(funct3),
@@ -306,7 +300,7 @@ module core #(
   );
 
   alu #(
-    .DATA_WIDTH(DATA_WIDTH) 
+    .DATA_WIDTH(DATA_WIDTH)
   ) u_alu (
     .clk(clk),
     .clk_en(clk_en),

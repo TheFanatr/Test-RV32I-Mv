@@ -17,4 +17,10 @@ typedef enum bit [1:0] {
   JM_ABSOLUTE
 } jump_mode_e;
 
+typedef enum reg [1:0] { 
+  RM_RAM_READ_WAIT,
+  RM_ACT,
+  RM_RAM_WRITE_WAIT // prefetches
+} run_mode_e;
+
 `endif // TYPES_SVH
