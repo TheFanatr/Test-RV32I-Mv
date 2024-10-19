@@ -3,6 +3,8 @@
 #include "verilated_fst_c.h"
 #include "uartsim.h"
 #include <cstdio>
+#include <csignal>
+
 Vrv32i *top;
 VerilatedContext *contextp;
 VerilatedFstC *tfp;
@@ -15,7 +17,25 @@ void step() {
   //tfp->dump(contextp->time());
 }
 
+void soft_close(...) {
+  tfp->close();
+  uart->kill();
+
+  delete uart;
+  delete top;
+  delete contextp;
+  delete tfp;
+
+  exit(0);
+}
+
+void (*const soft_close_p)(int) = reinterpret_cast<void (*)(int)>(soft_close);
+
 int main(int argc, char **argv) {
+  std::signal(SIGINT, soft_close_p);
+  std::signal(SIGTERM, soft_close_p);
+  std::signal(SIGQUIT, soft_close_p);
+
   contextp = new VerilatedContext;
   Verilated::traceEverOn(true);
   contextp->commandArgs(argc, argv);
