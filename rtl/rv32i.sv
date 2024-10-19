@@ -11,7 +11,8 @@ module rv32i (
     output tx,
 
     //Booted
-    output booted
+    output booted,
+    output sysflags_e sys
 );
 
   // uart - out
@@ -132,7 +133,9 @@ module rv32i (
     .i_write_data(write_data),
 
     .o_write_uart(write_uart),
-    .o_write_uart_en(write_uart_en)
+    .o_write_uart_en(write_uart_en),
+
+    .o_sys(sys)
   );
 
   core u_core (

@@ -3,6 +3,8 @@
 #include "verilated_fst_c.h"
 #include "uartsim.h"
 #include <cstdio>
+
+
 Vrv32i *top;
 VerilatedContext *contextp;
 VerilatedFstC *tfp;
@@ -29,7 +31,7 @@ int main(int argc, char **argv) {
   top->clk = 0;
   step();
 
- 
+
   top->clk = !top->clk;
   step();
 
@@ -59,14 +61,20 @@ int main(int argc, char **argv) {
   top->clk = !top->clk;
   step();
 
-  tfp->open("run.fst");
+  tfp->open("uart.fst");
 
   /*while (!top->booted) {
     top->clk = 1;
     top->eval();
 
+    tfp->dump(contextp->time());
+    contextp->timeInc(1);
+
     top->clk = 0;
     top->eval();
+
+    tfp->dump(contextp->time());
+    contextp->timeInc(1);
 
     top->rx = (*uart)(top->tx);
 
@@ -84,15 +92,15 @@ int main(int argc, char **argv) {
 
   // printf("Booted\n");
 
-  //while (!contextp->gotFinish()) {
-  while (true) {
-   //for (int i = 0; i < 10000; i++) {
-    top->clk = 1;
+  while (!contextp->gotFinish() || top->sys) {
+  // while (true) {
+  //for (int i = 0; i < 10000; i++) {
+    top->clk = 0;
     top->eval();
     if(top->booted) tfp->dump(contextp->time());
     if(top->booted) contextp->timeInc(1);
 
-    top->clk = 0;
+    top->clk = 1;
     top->eval();
     if(top->booted) tfp->dump(contextp->time());
     if(top->booted) contextp->timeInc(1);

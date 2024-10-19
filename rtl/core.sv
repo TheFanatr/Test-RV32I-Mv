@@ -10,6 +10,8 @@ module core #(
     input clk_en,
     input rst,
 
+    input sysflags_e sys,
+
     // RAM
     output [ADDR_WIDTH:0] o_read_fetch_addr,
     input  [DATA_WIDTH:0] i_read_fetch_data,
@@ -113,7 +115,7 @@ module core #(
             run_mode <= RM_RAM_READ_WAIT;
           end
         endcase
-     // else $finish();
+      else if (~(sys & SYSFLAGS_KEEPALIVE)) $finish();
 
   always_ff @(posedge clk)
     case(opcode)
@@ -174,7 +176,7 @@ module core #(
         // $display(($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11});
         // $display(funct3);
         case (funct3)
-          // Sign-extend byte to 32 bits 
+          // Sign-extend byte to 32 bits
           3'b000: unique case (($signed(regs_a_data) + $signed(imm)) & {32'b0,2'b11}) // LB
             34'b00: regs_write_data = {{24{i_read_data[7]}}, i_read_data[7:0]};
             34'b01: regs_write_data = {{24{i_read_data[15]}}, i_read_data[15:8]};

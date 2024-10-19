@@ -1,5 +1,7 @@
 `timescale 1ns / 1ps
 
+`include "types.svh"
+
 module ram #(
     ADDR_WIDTH = 31,
     DATA_WIDTH = 31,
@@ -14,7 +16,6 @@ module ram #(
     input [ADDR_WIDTH:0] i_read_addr,
     output reg [DATA_WIDTH:0] o_read_data,
 
-
     //Read fetch
     input [ADDR_WIDTH:0] i_read_fetch_addr,
     output reg [DATA_WIDTH:0] o_read_fetch_data,
@@ -27,7 +28,10 @@ module ram #(
 
     // UART
     output [7:0] o_write_uart,
-    output o_write_uart_en
+    output bit o_write_uart_en,
+
+    // SYSTEM BITS
+    output sysflags_e o_sys
 );
 
 `ifdef TESTING1
@@ -55,16 +59,20 @@ assign o_write_uart = i_write_data[7:0];
 
 always_ff @(posedge clk)
     if (clk_en)
-        if (i_write_addr == ADDR_COUNT)
-            if (i_write_enable)
+        if (i_write_addr == ADDR_COUNT * 2) begin
+            if (i_write_enable) begin
                 if (i_byte_enable[0]) begin
                     // $write("%c", o_write_uart);
                     o_write_uart_en <= 1'b1;
-                end else o_write_uart_en <= 1'b0;
+                end
+                else o_write_uart_en <= 1'b0;
+            end
             else o_write_uart_en <= 1'b0;
-        else o_write_uart_en <= 1'b0;
+        end else if (i_write_addr == ADDR_COUNT) begin
+            o_sys <= sysflags_e'{sysflags_e'(i_write_data[0])};
+            o_write_uart_en <= 1'b0;
+        end
     else o_write_uart_en <= 1'b0;
-
 
 always_ff @(posedge clk) begin
     if (clk_en) begin

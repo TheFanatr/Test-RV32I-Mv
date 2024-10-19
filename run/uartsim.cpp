@@ -169,6 +169,12 @@ void	UARTSIM::check_for_new_connections(void) {
 				perror("Accept failed:");
 			// else printf("New connection accepted!\n");
 		}
+
+		// int listeners = 0;
+		// socklen_t optlen = sizeof(listeners);
+		// getsockopt(m_skt, SOL_SOCKET, SO_ACCEPTCONN, &listeners, &optlen);
+
+		// fprintf(stdout, "Number of listeners: %d", listeners);
 	}
 
 }
